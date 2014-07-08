@@ -1,3 +1,1 @@
-extension_project
-=================
-First commit!
+Plesk extension adding user-friendly representation and simple analysis of log files.
