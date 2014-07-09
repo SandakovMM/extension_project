@@ -1,6 +1,6 @@
 <?php
 
-class Modules_CustomButtons_CustomButtons extends pm_Hook_CustomButtons
+class Modules_FrendlyLogs_CustomButtons extends pm_Hook_CustomButtons
 {
 
     public function getButtons() // Functions must return list of list with our buttons properties
@@ -9,7 +9,7 @@ class Modules_CustomButtons_CustomButtons extends pm_Hook_CustomButtons
             'place' => self::PLACE_DOMAIN_PROPERTIES,
             'title' => 'Friendly logs',
             'description' => 'Button to call friendly logs extension',
-            'link' => pm_Context::getActionUrl('form'),
+            'link' => pm_Context::getActionUrl('index', 'index'),
         ]];
     }
 

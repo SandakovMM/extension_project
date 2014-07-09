@@ -3,7 +3,7 @@
   <id>friendlyLogs</id>
   <name>Friendly Logs</name>
   <description>This module adds friendly representation of log files</description>
-  <version>0.0</version>
+  <version>0.1</version>
   <release>0</release>
   <vendor>Parallels, Inc.</vendor>
   <plesk_min_version>11.0.1</plesk_min_version>
