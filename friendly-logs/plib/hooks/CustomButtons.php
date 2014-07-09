@@ -1,6 +1,6 @@
 <?php
 
-class Modules_FrendlyLogs_CustomButtons extends pm_Hook_CustomButtons
+class Modules_FriendlyLogs_CustomButtons extends pm_Hook_CustomButtons
 {
 
     public function getButtons() // Functions must return list of list with our buttons properties
