@@ -35,22 +35,10 @@ class IndexController extends pm_Controller_Action
         // Display simple text in view
         $this->view->test = 'This is index action for testing module.';
 
-	// get needed names with shell command ls
-	$sys_answer = shell_exec ('ls /var/www/vhosts/system/a93-91-167-217.ec.parallels-summit.com/logs');
-	$logs_names = explode("\n", $sys_answer); // parce return of ls
-	// Show results
-	$counter = 0;
-	foreach ($logs_names as $one_name) {
-		if (!empty($one_name)) {
-			$counter = $counter + 1;
-			echo '<hr /> Value #' . $counter . ': ' . $one_name;
-		}
-	}
-	echo '<hr /> Total elements: ' . $counter;
-	
-        // Init form here
-        $form = new pm_Form_Simple();
-        $form->addElement('text', 'exampleText', array(
+        $form = new pm_Form_Simple(); // init form class
+
+        // Add text and button elements
+        /*$form->addElement('text', 'exampleText', array(
             'label' => 'Somthing in here',
             'value' => pm_Settings::get('exampleText'),
             'required' => true,
@@ -59,8 +47,34 @@ class IndexController extends pm_Controller_Action
 	     ->addElement('submit', 'geted', array(
 		'attribs' => array(
 		'onclick' => 'alert("Hello!")'
-	)));
-		
+	)));*/
+
+	// Geting domain name what we work.
+	$domain = pm_Session::getCurrentDomain();
+	$domainName = $domain->getName();
+	
+	// get needed names with shell command ls
+	$sys_answer = shell_exec ('ls /var/www/vhosts/system/' .
+		$domainName . '/logs');
+	$logs_names = explode("\n", $sys_answer); // parce return of ls
+	// Show results
+	$counter = 0;
+	foreach ($logs_names as $one_name) {
+		if (!empty($one_name)) {
+			$counter = $counter + 1;	
+			$checkbox = $form->createElement('checkbox', 'log' . $counter,
+					 array('label' => $one_name,));
+			$checkbox->setAttrib('onclick', 'alert("Hello, this is Robert!")');
+			$form->addElement($checkbox);
+		}
+	}
+
+	// Last button, who must set all others seted or somthing like this
+	$checkbox = $form->createElement('checkbox', 'setupAll', array(
+			'label' => 'Total count is:' . $counter ,));
+	$checkbox->setAttrib('onclick', 'alert("Now set it all")');
+	$form->addElement($checkbox);
+	
         $this->view->form = $form;
     }
 
