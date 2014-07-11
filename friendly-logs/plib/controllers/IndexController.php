@@ -34,13 +34,24 @@ class IndexController extends pm_Controller_Action
     {
         // Display simple text in view
         $this->view->test = 'This is index action for testing module.';
-	
 
-	$sys_answer = system ('pwd');
+	// get needed names with shell command ls
+	$sys_answer = shell_exec ('ls /var/www/vhosts/system/a93-91-167-217.ec.parallels-summit.com/logs');
+	$logs_names = explode("\n", $sys_answer); // parce return of ls
+	// Show results
+	$counter = 0;
+	foreach ($logs_names as $one_name) {
+		if (!empty($one_name)) {
+			$counter = $counter + 1;
+			echo '<hr /> Value #' . $counter . ': ' . $one_name;
+		}
+	}
+	echo '<hr /> Total elements: ' . $counter;
+	
         // Init form here
         $form = new pm_Form_Simple();
         $form->addElement('text', 'exampleText', array(
-            'label' => $sys_answer,
+            'label' => 'Somthing in here',
             'value' => pm_Settings::get('exampleText'),
             'required' => true,
             'validators' => array(array('NotEmpty', true),),
