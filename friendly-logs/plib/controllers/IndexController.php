@@ -17,10 +17,10 @@ class IndexController extends pm_Controller_Action
                 'title' => 'List',
                 'action' => 'list',
             ),
-	    array(
+	   /* array(
                 'title' => 'Tools',
                 'action' => 'tools',
-            ),
+            ),*/
         );
     }
 
@@ -38,7 +38,7 @@ class IndexController extends pm_Controller_Action
         $form = new pm_Form_Simple(); // init form class
 
         // Add text and button elements
-        /*$form->addElement('text', 'exampleText', array(
+/*        $form->addElement('text', 'exampleText', array(
             'label' => 'Somthing in here',
             'value' => pm_Settings::get('exampleText'),
             'required' => true,
@@ -48,6 +48,11 @@ class IndexController extends pm_Controller_Action
 		'attribs' => array(
 		'onclick' => 'alert("Hello!")'
 	)));*/
+//	$checkArray = array(); // Shit with display groups must work like that, but this is not working
+//	array_push($checkArray, 'example' . 'Text');
+//	array_push($checkArray, 'get' . 'ed');
+//	$form->addDisplayGroup($checkArray, 'check', array('legend'=>'Checking'));
+	$ourDisplayGroup = $form->getDisplayGroup('check');
 
 	// Geting domain name what we work.
 	$domain = pm_Session::getCurrentDomain();
@@ -57,8 +62,10 @@ class IndexController extends pm_Controller_Action
 	$sys_answer = shell_exec ('ls /var/www/vhosts/system/' .
 		$domainName . '/logs');
 	$logs_names = explode("\n", $sys_answer); // parce return of ls
-	// Show results
+
 	$counter = 0;
+	$logNameArray = array();
+	// Make display group with log file names
 	foreach ($logs_names as $one_name) {
 		if (!empty($one_name)) {
 			$counter = $counter + 1;	
@@ -66,6 +73,13 @@ class IndexController extends pm_Controller_Action
 					 array('label' => $one_name,));
 			$checkbox->setAttrib('onclick', 'alert("Hello, this is Robert!")');
 			$form->addElement($checkbox);
+				
+			if (is_null($ourDisplayGroup)) {
+				$logNameArray[] = $checkbox->getName();
+				$form->addDisplayGroup($logNameArray, 'group', array('legend'=>'Log file names'));
+				$ourDisplayGroup = $form->getDisplayGroup('group');
+			}
+			$ourDisplayGroup->addElement($checkbox);/* Find the way how do it normal*/			
 		}
 	}
 
@@ -74,7 +88,8 @@ class IndexController extends pm_Controller_Action
 			'label' => 'Total count is:' . $counter ,));
 	$checkbox->setAttrib('onclick', 'alert("Now set it all")');
 	$form->addElement($checkbox);
-	
+	$ourDisplayGroup->addElement($checkbox);/* Find the way how do it normal*/
+
         $this->view->form = $form;
     }
 
