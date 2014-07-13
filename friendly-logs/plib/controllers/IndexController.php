@@ -17,10 +17,6 @@ class IndexController extends pm_Controller_Action
                 'title' => 'List',
                 'action' => 'list',
             ),
-	   /* array(
-                'title' => 'Tools',
-                'action' => 'tools',
-            ),*/
         );
     }
 
@@ -38,7 +34,7 @@ class IndexController extends pm_Controller_Action
         $form = new pm_Form_Simple(); // init form class
 
         // Add text and button elements
-/*        $form->addElement('text', 'exampleText', array(
+        $form->addElement('text', 'exampleText', array(
             'label' => 'Somthing in here',
             'value' => pm_Settings::get('exampleText'),
             'required' => true,
@@ -47,12 +43,10 @@ class IndexController extends pm_Controller_Action
 	     ->addElement('submit', 'geted', array(
 		'attribs' => array(
 		'onclick' => 'alert("Hello!")'
-	)));*/
-//	$checkArray = array(); // Shit with display groups must work like that, but this is not working
-//	array_push($checkArray, 'example' . 'Text');
-//	array_push($checkArray, 'get' . 'ed');
-//	$form->addDisplayGroup($checkArray, 'check', array('legend'=>'Checking'));
-	$ourDisplayGroup = $form->getDisplayGroup('check');
+	)));/**/
+	$form->addDisplayGroup(array('exampleText', 'geted'), 'check', array('legend'=>'Checking'));
+	$checkGroup = $form->getDisplayGroup('check');
+	$logNamesGroup = $form->getDisplayGroup('group');
 
 	// Geting domain name what we work.
 	$domain = pm_Session::getCurrentDomain();
@@ -74,12 +68,12 @@ class IndexController extends pm_Controller_Action
 			$checkbox->setAttrib('onclick', 'alert("Hello, this is Robert!")');
 			$form->addElement($checkbox);
 				
-			if (is_null($ourDisplayGroup)) {
+			if (is_null($logNamesGroup)) {
 				$logNameArray[] = $checkbox->getName();
 				$form->addDisplayGroup($logNameArray, 'group', array('legend'=>'Log file names'));
-				$ourDisplayGroup = $form->getDisplayGroup('group');
+				$logNamesGroup = $form->getDisplayGroup('group');
 			}
-			$ourDisplayGroup->addElement($checkbox);/* Find the way how do it normal*/			
+			$logNamesGroup->addElement($checkbox);/* Find the way how do it normal*/			
 		}
 	}
 
@@ -88,7 +82,18 @@ class IndexController extends pm_Controller_Action
 			'label' => 'Total count is:' . $counter ,));
 	$checkbox->setAttrib('onclick', 'alert("Now set it all")');
 	$form->addElement($checkbox);
-	$ourDisplayGroup->addElement($checkbox);/* Find the way how do it normal*/
+	$logNamesGroup->addElement($checkbox);/* Find the way how do it normal*/
+
+	// Decorator for our display group with checkboxes
+	$logNamesGroup->setDecorators(array(
+		'FormElements', 'Fieldset',
+		array('HtmlTag', array('tag'=>'div', 'style'=>'width:30%;;float;left;'))
+	));
+
+	$checkGroup->setDecorators(array(
+		'FormElements', 'Fieldset',
+		array('HtmlTag', array('tag'=>'div', 'background-color'=>'#3366cc', 'style'=>'width:25%;;float;right;'))
+	));/**/
 
         $this->view->form = $form;
     }
