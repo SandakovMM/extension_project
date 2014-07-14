@@ -79,11 +79,11 @@ int listen_socket(char address[16], int port, int queue_size)
 	return sock;
 }
 
-#define prepareBuffer frameSize = BUF_LEN; memset(frame_buf, 0, BUF_LEN);
+#define prepareBuffer frameSize = BUF_LEN; memset(frameBuf, 0, BUF_LEN);
 int do_handshake(int socket)
 {
-	unsigned char frame_buf[BUF_LEN];
-	unsigned char data_buf[BUF_LEN];
+	unsigned char frameBuf[BUF_LEN];
+	unsigned char dataBuf[BUF_LEN];
 	size_t readedLength = 0;
 	unsigned int frameSize;
 	enum wsFrameType frameType = WS_INCOMPLETE_FRAME;
@@ -92,7 +92,7 @@ int do_handshake(int socket)
 
 	while (frameType == WS_INCOMPLETE_FRAME)
 	{
-	        ssize_t readed = recv(socket, frame_buf+readedLength, BUF_LEN-readedLength, 0);
+	        ssize_t readed = recv(socket, frameBuf+readedLength, BUF_LEN-readedLength, 0);
 	        if (!readed)
 		{
        			close(socket);
@@ -100,37 +100,37 @@ int do_handshake(int socket)
 		}
         	readedLength+= readed;
 		assert(readedLength <= BUF_LEN);
-		frameType = wsParseHandshake(frame_buf, readedLength, &hs);
+		frameType = wsParseHandshake(frameBuf, readedLength, &hs);
 
 		if ((frameType == WS_INCOMPLETE_FRAME && readedLength >= BUF_LEN) || frameType == WS_ERROR_FRAME)
 		{
 			printf("Buffer is too small or invalid frame\n");
                 	prepareBuffer;
-	                frameSize = sprintf((char *)frame_buf,
+	                frameSize = sprintf((char *)frameBuf,
                                     "HTTP/1.1 400 Bad Request\r\n"
                                     "%s%s\r\n\r\n",
                                     versionField,
                                     version);
-        	        safeSend(socket, frame_buf, frameSize);
+        	        safeSend(socket, frameBuf, frameSize);
 			return -1;
 		}
         }
 	if (frameType == WS_OPENING_FRAME)
 	{
 		frameSize = BUF_LEN;
-		memset(frame_buf, 0, BUF_LEN);
-		wsGetHandshakeAnswer(&hs, frame_buf, &frameSize);
+		memset(frameBuf, 0, BUF_LEN);
+		wsGetHandshakeAnswer(&hs, frameBuf, &frameSize);
 		freeHandshake(&hs);
-		if (safeSend(socket, frame_buf, frameSize) == -1)
+		if (safeSend(socket, frameBuf, frameSize) == -1)
 			return -1;
 		return 0;
 	}
 	return -1;
 }
 
-int read_frame(int socket, unsigned char *buf, int len)
+int readFrame(int socket, unsigned char *buf, int len)
 {
-	unsigned char frame_buf[BUF_LEN];
+	unsigned char frameBuf[BUF_LEN];
 	size_t readedLength = 0;
 	unsigned int frameSize;
 	unsigned int dataSize;
@@ -139,7 +139,7 @@ int read_frame(int socket, unsigned char *buf, int len)
 
 	while (frameType == WS_INCOMPLETE_FRAME)
 	{
-	        ssize_t readed = recv(socket, frame_buf+readedLength, BUF_LEN-readedLength, 0);
+	        ssize_t readed = recv(socket, frameBuf+readedLength, BUF_LEN-readedLength, 0);
 	        if (readed <= 0)
 		{
 			if (errno == EAGAIN || errno == EWOULDBLOCK)
@@ -156,14 +156,14 @@ int read_frame(int socket, unsigned char *buf, int len)
         	readedLength+= readed;
 		assert(readedLength <= BUF_LEN);
 		//frameType = wsParseHandshake(frame_buf, readedLength, &hs);
-            	frameType = wsParseInputFrame(frame_buf, readedLength, &data, &dataSize);
+            	frameType = wsParseInputFrame(frameBuf, readedLength, &data, &dataSize);
 
 		if ((frameType == WS_INCOMPLETE_FRAME && readedLength >= BUF_LEN) || frameType == WS_ERROR_FRAME)
 		{
 			printf("Buffer is too small or invalid frame\n");
                 	prepareBuffer;
-	                wsMakeFrame(NULL, 0, frame_buf, &frameSize, WS_CLOSING_FRAME);
-        	        safeSend(socket, frame_buf, frameSize);
+	                wsMakeFrame(NULL, 0, frameBuf, &frameSize, WS_CLOSING_FRAME);
+        	        safeSend(socket, frameBuf, frameSize);
 			return -5;
 		}
 
@@ -213,8 +213,7 @@ void *log_monitor(void *arg)
 {
 	unsigned char frameBuf[BUF_LEN];
 	unsigned char dataBuf[BUF_LEN];
-	char logBuf[LOG_BUF_LEN];
-
+	char logBuf[LOG_BUF_LEN + 1];
 	int socket = *((int*)arg);
 
 	if (do_handshake(socket) < 0)
@@ -232,15 +231,17 @@ void *log_monitor(void *arg)
 	{
 		printf("Error while opening log file (%i)\n", logfd);
 		close(socket);
+		waitpid(pid, NULL, 0);
 		return NULL;
 	}
 
 	if (fcntl(socket, F_SETFL, O_NONBLOCK) == -1 ||
 		fcntl(logfd, F_SETFL, O_NONBLOCK) == -1)
 	{
-		printf("ALARM\n");
+		printf("Unable to set descriptor to non blocking mode\n");
 		close(socket);//TODO: proper websocket connectin closing
 		close(logfd);
+		waitpid(pid, NULL, 0);
 		return NULL;
 	}
 
@@ -248,11 +249,13 @@ void *log_monitor(void *arg)
 	if (!logStream)
 	{
 		printf("null stream\n");
+		close(socket);//TODO: proper websocket connectin closing
+		waitpid(pid, NULL, 0);
 		return NULL;
 	}
 
 	fd_set fds;
-	int nfds = socket > logfd ? socket : logfd;
+	int nfds = (socket > logfd ? socket : logfd) + 1;
 	while (true)
 	{
 		FD_ZERO(&fds);
@@ -260,23 +263,22 @@ void *log_monitor(void *arg)
 		FD_SET(socket, &fds);
 		printf("selecting\n");
 		select(nfds, &fds, NULL, NULL, NULL);
+		printf("select returned\n");
 
 		if(FD_ISSET(socket, &fds))
 		{
 			printf("Trying to recv\n");
-			ret = read_frame(socket, dataBuf, BUF_LEN);
+			ret = readFrame(socket, dataBuf, BUF_LEN);
 			if (ret > 0)
 				printf("Received: %s\n", dataBuf);
 			else if (ret == -4)
 			{
 				printf("User disconnected\n");
-				close(socket);
 				break;
 			}
 			else
 			{
 				printf("Error while reading frame (%i). Closing connection.\n", ret);
-				close(socket);
 				break;
 			}
 		}
@@ -287,15 +289,23 @@ void *log_monitor(void *arg)
 			if (fgets(logBuf, LOG_BUF_LEN, logStream) == NULL)
 			{
 				printf("Failed to read from tail, killing fork\n");
-				fclose(logStream);
-				waitpid(pid, NULL, 0);
-				printf("Fork exited\n");
 				break;
 			}
 			printf("%s", logBuf);
+			/*ret = read(logfd, logBuf, LOG_BUF_LEN);
+			if ((ret < 0 && errno != EWOULDBLOCK && errno != EAGAIN) || ret == 0)
+			{
+				printf("Failed to read from tail, killing fork\n");
+				break;
+			}
+			logBuf[ret] = 0;*/
+
 		}
 	}
-
+	close(socket);
+	fclose(logStream);
+	//close(logfd);
+	waitpid(pid, NULL, 0);
 }
 
 void *connection_listener(void *arg)
