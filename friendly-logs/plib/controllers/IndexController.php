@@ -50,7 +50,7 @@ class IndexController extends pm_Controller_Action
 	$this->checkGroup = $form->getDisplayGroup('check');
 	
 	$this->castFileNamesGroup($form);
-//	$this->castLogOutputPlace($form);
+	$this->castLogOutputPlace($form);
 
 	$this->checkGroup->setDecorators(array(
 		'FormElements', 'Fieldset',
@@ -104,8 +104,14 @@ class IndexController extends pm_Controller_Action
 		array('HtmlTag', array('tag'=>'div', 'style'=>'width:30%;;float:left;'))
 	));
     }
-    private function castLogOutputPlase($from)
+    private function castLogOutputPlace($form)
     {
+	for ($i = 0; $i < 50; $i++) {
+		$somthing = $form->createElement('simpleText', 'simText' . $i,
+					 ['label' => 'somthing', 'value' => 'other' . $i]);
+		$form->addElement($somthing);
+		$this->checkGroup->addElement($somthing);
+	}
     }
     public function listAction()
     {
