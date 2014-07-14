@@ -2,6 +2,8 @@
 
 class IndexController extends pm_Controller_Action
 {
+    private $checkGroup = null;
+    private $logNamesGroup = null;
     public function init()
     {
         parent::init();
@@ -45,9 +47,22 @@ class IndexController extends pm_Controller_Action
 		'onclick' => 'alert("Hello!")'
 	)));/**/
 	$form->addDisplayGroup(array('exampleText', 'geted'), 'check', array('legend'=>'Checking'));
-	$checkGroup = $form->getDisplayGroup('check');
-	$logNamesGroup = $form->getDisplayGroup('group');
+	$this->checkGroup = $form->getDisplayGroup('check');
+	
+	$this->castFileNamesGroup($form);
+//	$this->castLogOutputPlace($form);
 
+	$this->checkGroup->setDecorators(array(
+		'FormElements', 'Fieldset',
+		array('HtmlTag', array('tag'=>'div', 'background-color'=>'#3366cc', 'style'=>'width:70%;;float:right;'))
+	));/**/
+
+        $this->view->form = $form;
+    }
+   
+    private function castFileNamesGroup($form) // add checks with log file name to a form
+    {
+	$this->logNamesGroup = $form->getDisplayGroup('group');
 	// Geting domain name what we work.
 	$domain = pm_Session::getCurrentDomain();
 	$domainName = $domain->getName();
@@ -56,7 +71,6 @@ class IndexController extends pm_Controller_Action
 	$sys_answer = shell_exec ('ls /var/www/vhosts/system/' .
 		$domainName . '/logs');
 	$logs_names = explode("\n", $sys_answer); // parce return of ls
-
 	$counter = 0;
 	$logNameArray = array();
 	// Make display group with log file names
@@ -68,12 +82,12 @@ class IndexController extends pm_Controller_Action
 			$checkbox->setAttrib('onclick', 'alert("Hello, this is Robert!")');
 			$form->addElement($checkbox);
 				
-			if (is_null($logNamesGroup)) {
+			if (is_null($this->logNamesGroup)) {
 				$logNameArray[] = $checkbox->getName();
 				$form->addDisplayGroup($logNameArray, 'group', array('legend'=>'Log file names'));
-				$logNamesGroup = $form->getDisplayGroup('group');
+				$this->logNamesGroup = $form->getDisplayGroup('group');
 			}
-			$logNamesGroup->addElement($checkbox);/* Find the way how do it normal*/			
+			$this->logNamesGroup->addElement($checkbox);/* Find the way how do it normal*/			
 		}
 	}
 
@@ -82,22 +96,17 @@ class IndexController extends pm_Controller_Action
 			'label' => 'Total count is:' . $counter ,));
 	$checkbox->setAttrib('onclick', 'alert("Now set it all")');
 	$form->addElement($checkbox);
-	$logNamesGroup->addElement($checkbox);/* Find the way how do it normal*/
+	$this->logNamesGroup->addElement($checkbox);/* Find the way how do it normal*/
 
 	// Decorator for our display group with checkboxes
-	$logNamesGroup->setDecorators(array(
+	$this->logNamesGroup->setDecorators(array(
 		'FormElements', 'Fieldset',
-		array('HtmlTag', array('tag'=>'div', 'style'=>'width:30%;;float;left;'))
+		array('HtmlTag', array('tag'=>'div', 'style'=>'width:30%;;float:left;'))
 	));
-
-	$checkGroup->setDecorators(array(
-		'FormElements', 'Fieldset',
-		array('HtmlTag', array('tag'=>'div', 'background-color'=>'#3366cc', 'style'=>'width:25%;;float;right;'))
-	));/**/
-
-        $this->view->form = $form;
     }
-
+    private function castLogOutputPlase($from)
+    {
+    }
     public function listAction()
     {
         $list = $this->_getNumbersList();
