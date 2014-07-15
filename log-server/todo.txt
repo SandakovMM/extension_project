@@ -1,0 +1,4 @@
+1. Get rid of mallocs in websocket library
+2. Refactor websocket ifrastructure into a single class
+3. Use the same naming style everywhere (refactor where needed)
+4. Proper error handling

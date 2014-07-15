@@ -29,6 +29,7 @@ struct connection_listener_args{
 
 struct log_monitor_args{
 	int socket;
+	char *filename;
 };
 
 struct client{
@@ -48,18 +49,40 @@ void clear_client(client &cl)
 int safeSend(int clientSocket, const uint8_t *buffer, size_t bufferSize)
 {
     ssize_t written = send(clientSocket, buffer, bufferSize, 0);
-    if (written == -1) {
+    if (written == -1)
+    {
         close(clientSocket);
         printf("send failed\n");
         return -1;
     }
-    if (written != bufferSize) {
-        close(clientSocket);
-        printf("written not all bytes\n");
-        return -1;
+    if (written != bufferSize) 
+    {
+        printf("written not all bytes(%i of %i)\n", written, bufferSize);
+
+	int writtenTotal = written;
+	while (writtenTotal < bufferSize && written >= 0)
+	{
+		written = send(clientSocket, buffer + writtenTotal, bufferSize - writtenTotal, 0);
+		writtenTotal += written;
+		printf("written %i bytes more (%i of %i total)\n", written, writtenTotal, bufferSize);
+	}
+	if (written < 0)
+	{
+	        close(clientSocket);
+        	return -1;
+	}
     }
     
     return 0;
+}
+
+int sendData(int socket, void *data, int len)
+{
+	unsigned char frameBuf[BUF_LEN];
+	size_t frameLen = BUF_LEN;
+
+	wsMakeFrame((unsigned char*)data, len, frameBuf, &frameLen, WS_TEXT_FRAME);
+	return safeSend(socket, frameBuf, frameLen);
 }
 
 int listen_socket(char address[16], int port, int queue_size)
@@ -80,7 +103,7 @@ int listen_socket(char address[16], int port, int queue_size)
 }
 
 #define prepareBuffer frameSize = BUF_LEN; memset(frameBuf, 0, BUF_LEN);
-int do_handshake(int socket)
+int doHandshake(int socket)
 {
 	unsigned char frameBuf[BUF_LEN];
 	unsigned char dataBuf[BUF_LEN];
@@ -128,7 +151,7 @@ int do_handshake(int socket)
 	return -1;
 }
 
-int readFrame(int socket, unsigned char *buf, int len)
+int recvData(int socket, unsigned char *buf, int len)
 {
 	unsigned char frameBuf[BUF_LEN];
 	size_t readedLength = 0;
@@ -202,32 +225,50 @@ int openLog(char *fileName, int *retFd, pid_t *retPid)
 		return 0;
 	}
 
-	char *args[] = {"tail", "-F", fileName, NULL};
+	char *args[] = {"tail", "-f", fileName, NULL};
 	close(tailPipe[0]);
 	dup2(tailPipe[1], 1);
 	execvp("tail", args);
 	return -3;
 }
 
-void *log_monitor(void *arg)
+void *logMonitor(void *arg)
 {
 	unsigned char frameBuf[BUF_LEN];
 	unsigned char dataBuf[BUF_LEN];
-	char logBuf[LOG_BUF_LEN + 1];
-	int socket = *((int*)arg);
+	char logBuf[LOG_BUF_LEN];
+	int ret;
+	log_monitor_args *param = (log_monitor_args*)arg;
+	int socket = param->socket;
 
-	if (do_handshake(socket) < 0)
+	logBuf[LOG_BUF_LEN - 1] = 0;
+
+	if (doHandshake(socket) < 0)
 	{
 		printf("Handshake error. Closing connection.\n");
 		close(socket);
 		return NULL;
 	}
 
-	int ret;
+	ret = recvData(socket, dataBuf, BUF_LEN);
+	if (ret > 0)
+		printf("Received: %s\n", dataBuf);
+	else if (ret == -4)
+	{
+		printf("User disconnected\n");
+		close(socket);
+		return NULL;
+	}
+	else
+	{
+		printf("Error while reading frame (%i). Closing connection.\n", ret);
+		close(socket);
+		return NULL;
+	}
+
 	int logfd;
 	pid_t pid;
-	printf("forked\n");
-	if (openLog("/home/goon/test.txt", &logfd, &pid) < 0)
+	if (openLog((char*)dataBuf, &logfd, &pid) < 0)
 	{
 		printf("Error while opening log file (%i)\n", logfd);
 		close(socket);
@@ -250,6 +291,7 @@ void *log_monitor(void *arg)
 	{
 		printf("null stream\n");
 		close(socket);//TODO: proper websocket connectin closing
+		close(logfd);
 		waitpid(pid, NULL, 0);
 		return NULL;
 	}
@@ -261,14 +303,14 @@ void *log_monitor(void *arg)
 		FD_ZERO(&fds);
 		FD_SET(logfd, &fds);
 		FD_SET(socket, &fds);
-		printf("selecting\n");
+		//printf("selecting\n");
 		select(nfds, &fds, NULL, NULL, NULL);
-		printf("select returned\n");
+		//printf("select returned\n");
 
 		if(FD_ISSET(socket, &fds))
 		{
-			printf("Trying to recv\n");
-			ret = readFrame(socket, dataBuf, BUF_LEN);
+			//printf("Trying to recv\n");
+			ret = recvData(socket, dataBuf, BUF_LEN);
 			if (ret > 0)
 				printf("Received: %s\n", dataBuf);
 			else if (ret == -4)
@@ -285,13 +327,20 @@ void *log_monitor(void *arg)
 	
 		if (FD_ISSET(logfd, &fds))
 		{
-			printf("Trying to read log\n");
-			if (fgets(logBuf, LOG_BUF_LEN, logStream) == NULL)
+			//printf("Trying to read log\n");
+			if (fgets(logBuf, LOG_BUF_LEN - 1, logStream) == NULL)
 			{
 				printf("Failed to read from tail, killing fork\n");
 				break;
 			}
-			printf("%s", logBuf);
+			if (sendData(socket, (unsigned char*)logBuf, strlen(logBuf)) >= 0)
+			{
+				//printf("sent:\n%s", logBuf);
+			}
+			else
+			{
+				printf("failed to send\n");
+			}
 			/*ret = read(logfd, logBuf, LOG_BUF_LEN);
 			if ((ret < 0 && errno != EWOULDBLOCK && errno != EAGAIN) || ret == 0)
 			{
@@ -305,10 +354,11 @@ void *log_monitor(void *arg)
 	close(socket);
 	fclose(logStream);
 	//close(logfd);
+	kill(pid, 9);
 	waitpid(pid, NULL, 0);
 }
 
-void *connection_listener(void *arg)
+void *connectionListener(void *arg)
 {
 	vector<client> pending_clients;
 	connection_listener_args *param = (connection_listener_args*)arg;
@@ -337,7 +387,7 @@ void *connection_listener(void *arg)
 			clients.push_back(new_client);
 	
 			pthread_t thread;
-			pthread_create(&thread, NULL, log_monitor, &(clients.at(clients.size() - 1).socket));
+			pthread_create(&thread, NULL, logMonitor, &(clients.at(clients.size() - 1).socket));
 
 			printf("Connection accepted\n");
 		}
@@ -363,6 +413,6 @@ int main(int argc, char *argv[])
 	arg.port = atoi(argv[2]);
 	memcpy(arg.address, argv[1], 12);
 	pthread_t thread;
-	pthread_create(&thread, NULL, connection_listener, &(arg));
+	pthread_create(&thread, NULL, connectionListener, &(arg));
 	pthread_join(thread, NULL);
 }
