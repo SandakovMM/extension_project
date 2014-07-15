@@ -76,7 +76,7 @@ class IndexController extends pm_Controller_Action
 			$counter = $counter + 1;	
 			$checkbox = $form->createElement('checkbox', 'log' . $counter,
 					 array('label' => $one_name,));
-			$checkbox->setAttrib('onclick', 'example()');
+			$checkbox->setAttrib('onclick', 'example(this)');
 			$form->addElement($checkbox);
 				
 			if (is_null($this->logNamesGroup)) {

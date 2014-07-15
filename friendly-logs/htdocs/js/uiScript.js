@@ -1,6 +1,13 @@
-function example()
+function example(clickedElem)
 {
-	alert("lalala");
+	var res = clickedElem.id;
+	var check = clickedElem.checked;
+	if (check == false) {
+		alert(res + " nononon");
+	}
+	else {
+		alert(res + " yep");
+	}
 }
 
 function example1()
