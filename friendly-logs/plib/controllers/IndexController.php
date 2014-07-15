@@ -8,7 +8,9 @@ class IndexController extends pm_Controller_Action
     {
         parent::init();
         $this->view->pageTitle = 'Example Module';
-
+	// Include js files.
+	$scriptURL = pm_Context::getBaseUrl() . 'js/uiScript.js';
+	$this->view->headScript()->appendFile($scriptURL);
         // Init tabs for all actions
         $this->view->tabs = array(
             array(
@@ -36,7 +38,7 @@ class IndexController extends pm_Controller_Action
         $form = new pm_Form_Simple(); // init form class
 
         // Add text and button elements
-        $form->addElement('text', 'exampleText', array(
+        /*$form->addElement('text', 'exampleText', array(
             'label' => 'Somthing in here',
             'value' => pm_Settings::get('exampleText'),
             'required' => true,
@@ -46,8 +48,7 @@ class IndexController extends pm_Controller_Action
 		'attribs' => array(
 		'onclick' => 'alert("Hello!")'
 	)));/**/
-	$form->addDisplayGroup(array('exampleText', 'geted'), 'check', array('legend'=>'Checking'));
-	$this->checkGroup = $form->getDisplayGroup('check');
+	//$form->addDisplayGroup(array('exampleText', 'geted'), 'check', array('legend'=>'Checking'));
 	
 	$this->castFileNamesGroup($form);
 	$this->castLogOutputPlace($form);
@@ -75,7 +76,7 @@ class IndexController extends pm_Controller_Action
 			$counter = $counter + 1;	
 			$checkbox = $form->createElement('checkbox', 'log' . $counter,
 					 array('label' => $one_name,));
-			$checkbox->setAttrib('onclick', 'alert("Hello, this is Robert!")');
+			$checkbox->setAttrib('onclick', 'example()');
 			$form->addElement($checkbox);
 				
 			if (is_null($this->logNamesGroup)) {
@@ -90,7 +91,7 @@ class IndexController extends pm_Controller_Action
 	// Last button, who must set all others seted or somthing like this
 	$checkbox = $form->createElement('checkbox', 'setupAll', array(
 			'label' => 'Total count is:' . $counter ,));
-	$checkbox->setAttrib('onclick', 'alert("Now set it all")');
+	$checkbox->setAttrib('onclick', 'example1()');
 	$form->addElement($checkbox);
 	$this->logNamesGroup->addElement($checkbox);/* Find the way how do it normal*/
 
@@ -103,17 +104,29 @@ class IndexController extends pm_Controller_Action
     }
     private function castLogOutputPlace($form)
     {
-	for ($i = 0; $i < 50; $i++) {
+	$this->checkGroup = $form->getDisplayGroup('check');
+
+	for ($i = 0; $i < 1; $i++) {
 		$somthing = $form->createElement('simpleText', 'simText' . $i,
 					 ['label' => 'somthing', 'value' => 'other' . $i]);
 		$form->addElement($somthing);
-		$this->checkGroup->addElement($somthing);
+		if(is_null($this->checkGroup)) {
+			$form->addDisplayGroup(array('simText' . $i), 'check', array('legend'=>'Checking'));	
+			$this->checkGroup = $form->getDisplayGroup('check');	
+		}
+		else {
+			$this->checkGroup->addElement($somthing);
+		}
 	}
 	$this->checkGroup->setDecorators(array(
 		'FormElements', 'Fieldset',
-		array('HtmlTag', array('tag'=>'div', 'background-color'=>'#3366cc', 'style'=>'width:65%;
-								height:80vh;float:right;overflow-y:auto;'))
+		array('HtmlTag', array('tag'=>'div', 'style'=>'width:65%;height:80vh;
+							float:right;overflow-y:auto;'))
 	));/**/
+
+//        $list = $this->_getNumbersList();
+        // List object for pm_View_Helper_RenderList
+        //$this->checkGroup->addElement($list);
     }
     public function listAction()
     {
