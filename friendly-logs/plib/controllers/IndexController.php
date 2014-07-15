@@ -52,10 +52,6 @@ class IndexController extends pm_Controller_Action
 	$this->castFileNamesGroup($form);
 	$this->castLogOutputPlace($form);
 
-	$this->checkGroup->setDecorators(array(
-		'FormElements', 'Fieldset',
-		array('HtmlTag', array('tag'=>'div', 'background-color'=>'#3366cc', 'style'=>'width:70%;;float:right;'))
-	));/**/
 
         $this->view->form = $form;
     }
@@ -101,7 +97,8 @@ class IndexController extends pm_Controller_Action
 	// Decorator for our display group with checkboxes
 	$this->logNamesGroup->setDecorators(array(
 		'FormElements', 'Fieldset',
-		array('HtmlTag', array('tag'=>'div', 'style'=>'width:30%;;float:left;'))
+		array('HtmlTag', array('tag'=>'div', 'style'=>'width:30%;height:80vh;float:left;
+										overflow-y:auto;'))
 	));
     }
     private function castLogOutputPlace($form)
@@ -112,6 +109,11 @@ class IndexController extends pm_Controller_Action
 		$form->addElement($somthing);
 		$this->checkGroup->addElement($somthing);
 	}
+	$this->checkGroup->setDecorators(array(
+		'FormElements', 'Fieldset',
+		array('HtmlTag', array('tag'=>'div', 'background-color'=>'#3366cc', 'style'=>'width:65%;
+								height:80vh;float:right;overflow-y:auto;'))
+	));/**/
     }
     public function listAction()
     {
