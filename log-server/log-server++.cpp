@@ -8,18 +8,27 @@ public:
 	{
 	}
 
-	void OnMessage(const Client &sender, char *message, int len)
+	void OnMessage(Client &sender, char *message, int len)
 	{
-		if (Send(sender, message, len) < 0)
+		if (len == 0)
+		{
+			printf("Received empty message. Sending back.\n");
+			sender.Send(NULL, 0);
+			return;
+		}
+		printf("Received: %s\nSending back.\n", message);
+		if (sender.Send(message, len) < 0)
 		{
 			printf("Error while sending\n");
 		}
 	}
 };
 
-int main()
+int main(int argc, char *argv[])
 {
-	EchoServer s(21054, "192.168.0.7", 10);
+	if (argc < 2)
+		return -1;
+	EchoServer s(atoi(argv[2]), argv[1], 10);
 	s.Run();
 	return 0;
 }

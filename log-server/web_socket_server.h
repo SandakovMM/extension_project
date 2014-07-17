@@ -52,5 +52,5 @@ public:
 	static void DisconnectClient(Client who);
 	int Run();
 	void Stop();
-	virtual void OnMessage(const Client &sender, char *message, int len)=0;
+	virtual void OnMessage(Client &sender, char *message, int len)=0;
 };
