@@ -65,14 +65,12 @@ class IndexController extends pm_Controller_Action
 	$domainName = $domain->getName();
 	
 	// get needed names with shell command ls
-	/*$sys_answer*/ $logs_names = glob(/*shell_exec ('ls*/ '/var/www/vhosts/system/' .
-		$domainName . '/logs/*log*');/*
-	$logs_names = explode("\n", $sys_answer); // parce return of ls
-	$counter = 0;*/
+	$logs_names = scandir/*glob*/('/var/www/vhosts/system/' .
+		$domainName . '/logs');
 	$logNameArray = array();
 	// Make display group with log file names
 	foreach ($logs_names as $one_name) {
-		if (!empty($one_name)) {
+		if (!empty($one_name) && '.' != $one_name && '..' != $one_name) {
 			$counter = $counter + 1;	
 			$checkbox = $form->createElement('checkbox', 'log' . $counter,
 					 array('label' => $one_name,));
