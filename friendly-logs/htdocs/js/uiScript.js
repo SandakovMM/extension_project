@@ -10,7 +10,20 @@ function example(clickedElem)
 	}
 }
 
-function example1()
+function example1(clickedElem)
 {
-	alert("Bababa");
+//	var proto = Prototype.Version();
+	alert("step zero");
+	var id = clickedElem.id;
+	alert("step one");
+	labels = document.getElementsByTagName("label");
+	alert("step two");
+	for (var i = 0; i < labels.length; i++) {
+		if(labels[i].htmlFor == id) {
+			alert(labels[i].value);
+			return;
+		}
+	}/**/
+//	alert(cols);
+//	var check = clickedElem.checked;
 }

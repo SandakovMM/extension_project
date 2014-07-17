@@ -65,10 +65,10 @@ class IndexController extends pm_Controller_Action
 	$domainName = $domain->getName();
 	
 	// get needed names with shell command ls
-	$sys_answer = shell_exec ('ls /var/www/vhosts/system/' .
-		$domainName . '/logs');
+	/*$sys_answer*/ $logs_names = glob(/*shell_exec ('ls*/ '/var/www/vhosts/system/' .
+		$domainName . '/logs/*log*');/*
 	$logs_names = explode("\n", $sys_answer); // parce return of ls
-	$counter = 0;
+	$counter = 0;*/
 	$logNameArray = array();
 	// Make display group with log file names
 	foreach ($logs_names as $one_name) {
@@ -91,7 +91,7 @@ class IndexController extends pm_Controller_Action
 	// Last button, who must set all others seted or somthing like this
 	$checkbox = $form->createElement('checkbox', 'setupAll', array(
 			'label' => 'Total count is:' . $counter ,));
-	$checkbox->setAttrib('onclick', 'example1()');
+	$checkbox->setAttrib('onclick', 'example1(this)');
 	$form->addElement($checkbox);
 	$this->logNamesGroup->addElement($checkbox);/* Find the way how do it normal*/
 
@@ -104,7 +104,7 @@ class IndexController extends pm_Controller_Action
     }
     private function castLogOutputPlace($form)
     {
-	$this->checkGroup = $form->getDisplayGroup('check');
+	/*$this->checkGroup = $form->getDisplayGroup('check');
 
 	for ($i = 0; $i < 1; $i++) {
 		$somthing = $form->createElement('simpleText', 'simText' . $i,
@@ -117,16 +117,20 @@ class IndexController extends pm_Controller_Action
 		else {
 			$this->checkGroup->addElement($somthing);
 		}
-	}
+	}/**/
+	$selectElem = new Zend_Form_Element_Select('logNamesList', array(
+			'label'=>'Log names', 'size'=>'2', 
+			'style'=>'width:65%;height:80vh;float:right;overflow-y:auto;'));
+	$selectElem->addMultiOptions(array('0'=>'some','1'=>'other','2'=>'fuck','3'=>'you', '4'=>'ok?'));
+	$form->addElement($selectElem);
+	//$selectElem = $form->addElement('select', 'logSelect');
+/*	$this->checkGroup->addElement($selectElem);
 	$this->checkGroup->setDecorators(array(
 		'FormElements', 'Fieldset',
 		array('HtmlTag', array('tag'=>'div', 'style'=>'width:65%;height:80vh;
 							float:right;overflow-y:auto;'))
 	));/**/
 
-//        $list = $this->_getNumbersList();
-        // List object for pm_View_Helper_RenderList
-        //$this->checkGroup->addElement($list);
     }
     public function listAction()
     {
