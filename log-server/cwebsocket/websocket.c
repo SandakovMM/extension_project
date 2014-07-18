@@ -65,13 +65,16 @@ static char* getUptoLinefeed(const char *startFrom)
 }
 
 enum wsFrameType wsParseHandshake(const uint8_t *inputFrame, size_t inputLength,
-                                  struct handshake *hs)
+                                  struct handshake *hs, size_t *frameLength)
 {
     const char *inputPtr = (const char *)inputFrame;
     const char *endPtr = (const char *)inputFrame + inputLength;
-
-    if (!strstr((const char *)inputFrame, "\r\n\r\n"))
+        
+    uint8_t *frame_end = strstr((const char *)inputFrame, "\r\n\r\n");    
+    if (!frame_end)
         return WS_INCOMPLETE_FRAME;
+    else
+	*frameLength = frame_end - inputFrame + 2 + 2;
     
     if (memcmp_P(inputFrame, PSTR("GET "), 4) != 0)
         return WS_ERROR_FRAME;
@@ -233,6 +236,10 @@ static size_t getPayloadLength(const uint8_t *inputFrame, size_t inputLength,
                                uint8_t *payloadFieldExtraBytes, enum wsFrameType *frameType) 
 {
     size_t payloadLength = inputFrame[1] & 0x7F;
+    if (payloadLength == 0)
+    {
+	    return 0;
+    }
     *payloadFieldExtraBytes = 0;
     if ((payloadLength == 0x7E && inputLength < 4) || (payloadLength == 0x7F && inputLength < 10)) {
         *frameType = WS_INCOMPLETE_FRAME;
@@ -263,7 +270,7 @@ static size_t getPayloadLength(const uint8_t *inputFrame, size_t inputLength,
 }
 
 enum wsFrameType wsParseInputFrame(uint8_t *inputFrame, size_t inputLength,
-                                   uint8_t **dataPtr, size_t *dataLength)
+                                   uint8_t **dataPtr, size_t *dataLength, size_t *frameLength)
 {
     assert(inputFrame && inputLength);
 
@@ -291,11 +298,14 @@ enum wsFrameType wsParseInputFrame(uint8_t *inputFrame, size_t inputLength,
         size_t payloadLength = getPayloadLength(inputFrame, inputLength,
                                                 &payloadFieldExtraBytes, &frameType);
         if (payloadLength > 0) {
-            if (payloadLength < inputLength-6-payloadFieldExtraBytes) // 4-maskingKey, 2-header
+            if (payloadLength > inputLength-6-payloadFieldExtraBytes) // 4-maskingKey, 2-header
+	    {
+		    printf("%i > %i, returning incomplete frame\n", payloadLength, inputLength-6-payloadFieldExtraBytes);
                 return WS_INCOMPLETE_FRAME;
+	    }
             uint8_t *maskingKey = &inputFrame[2 + payloadFieldExtraBytes];
 
-            assert(payloadLength == inputLength-6-payloadFieldExtraBytes);
+            //assert(payloadLength == inputLength-6-payloadFieldExtraBytes);
 
             *dataPtr = &inputFrame[2 + payloadFieldExtraBytes + 4];
             *dataLength = payloadLength;
@@ -305,6 +315,11 @@ enum wsFrameType wsParseInputFrame(uint8_t *inputFrame, size_t inputLength,
                 (*dataPtr)[i] = (*dataPtr)[i] ^ maskingKey[i%4];
             }
         }
+	else
+	{
+		*dataLength = 0;
+	}
+	*frameLength = payloadLength + payloadFieldExtraBytes + 6;
         return frameType;
     }
 

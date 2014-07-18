@@ -10,6 +10,12 @@
 
 #define prepareBuffer frame_size = BUF_LEN; memset(frame_buf, 0, BUF_LEN);
 
+#ifdef DEBUGLOGGING
+	#define Log(format, ...) printf(format, ## __VA_ARGS__)
+#else
+	#define Log(format, ...)
+#endif
+
 WebSocketServer::WebSocketServer(int port_, const char *address_, int max_queue_len_)
 {
 	port = port_;
@@ -23,51 +29,6 @@ WebSocketServer::WebSocketServer(int port_, const char *address_, int max_queue_
 
 int WebSocketServer::DoHandshake(Client &client)
 {
-	unsigned char frame_buf[BUF_LEN];
-	size_t read_total_len = 0;
-	unsigned int frame_size;
-	enum wsFrameType frame_type = WS_INCOMPLETE_FRAME;
-	struct handshake hs;
-	int socket = client.get_socket();
-	nullHandshake(&hs);
-
-	while (frame_type == WS_INCOMPLETE_FRAME)
-	{
-	        ssize_t readed = recv(socket, frame_buf+read_total_len, BUF_LEN-read_total_len, 0);
-	        if (!readed)
-		{
-       			close(socket);
-			return -1;
-		}
-        	read_total_len+= readed;
-		assert(read_total_len <= BUF_LEN);
-		frame_type = wsParseHandshake(frame_buf, read_total_len, &hs);
-
-		if ((frame_type == WS_INCOMPLETE_FRAME && read_total_len >= BUF_LEN) || frame_type == WS_ERROR_FRAME)
-		{
-			//printf("Buffer is too small or invalid frame\n");
-			prepareBuffer;
-			frame_size = sprintf((char *)frame_buf,
-							"HTTP/1.1 400 Bad Request\r\n"
-							"%s%s\r\n\r\n",
-							versionField,
-							version);
-			SendFrame(client, frame_buf, frame_size);
-			close(socket);					
-			return -1;
-		}
-        }
-	if (frame_type == WS_OPENING_FRAME)
-	{
-		frame_size = BUF_LEN;
-		memset(frame_buf, 0, BUF_LEN);
-		wsGetHandshakeAnswer(&hs, frame_buf, &frame_size);
-		freeHandshake(&hs);
-		if (SendFrame(client, frame_buf, frame_size) == -1)
-			return -1;
-		return 0;
-	}
-	return -1;
 }
 
 int WebSocketServer::ListenSocket()
@@ -101,20 +62,22 @@ void *WebSocketServer::ListenConnections(void *arg)
 	ret = me->ListenSocket();
 	if (ret < 0)
 	{
+		Log("Failed to bind/listen\n");
 		return NULL;
 	}
-	
-	Client new_client;
+	Log("Bound and listening\n");
 	while (!(me->stop))
 	{
+		Client new_client;
 		ret = new_client.Accept(me->server_socket);
+		Log("Someone has connected\n");
 		if (ret == 0)
 		{
-			ret = me->DoHandshake(new_client);
-			if (ret > 0)
-			{
+			//ret = me->DoHandshake(new_client);
+			//if (ret == 0)
+			//{
 				new_client.SetNonBlocking();
-				
+				//Log("Handshaked. Locking clients list\n");
 				me->LockClientsList();
 				me->clients.insert(new_client);
 				if (me->clients.size() == 1)
@@ -122,14 +85,22 @@ void *WebSocketServer::ListenConnections(void *arg)
 					me->TellThatListIsNotEmpty();
 				}
 				me->ReleaseClientsList();
-			}
+			//}
+			//else
+			//	Log("Failed handshaking (returned %i)\n", ret);
 		}
+		else
+			Log("Disconnected without handshaking. Errno tells: %s\n", strerror(new_client.get_last_error()));
 	}
 	
 	me->LockClientsList();
-	for (auto it = me->clients.begin(); it != me->clients.end(); it++)
+	for (std::set<Client,ClientComparator>::iterator it = me->clients.begin(); it != me->clients.end(); it++)
 	{
-		DisconnectClient(*it);
+		//This is normally a bad idea bacause a copy of the element in set is
+		//being modified, but here we don't care since we clear the set
+		//right after that and Disconnect will do just what we want anyway 
+		Client cur = *it;
+		cur.Disconnect();
 	}
 	me->clients.clear();
 	me->ReleaseClientsList();	
@@ -174,7 +145,7 @@ void WebSocketServer::TellThatListIsNotEmpty()
 	pthread_cond_signal(&clients_not_empty_cond);
 }
 
-void WebSocketServer::DisconnectClient(Client who)
+/*void WebSocketServer::DisconnectClient(Client who)
 {
 	unsigned char frame_buf[BUF_LEN];
 	unsigned int frame_size;
@@ -187,23 +158,23 @@ void WebSocketServer::DisconnectClient(Client who)
 
 int WebSocketServer::SendFrame(const Client &client, const uint8_t *buffer, size_t buffer_size)
 {
-	int client_socket = client.get_socket();
+    int client_socket = client.get_socket();
     ssize_t written = send(client_socket, buffer, buffer_size, 0);
     if (written == -1)
     {
-        printf("send failed\n");
+        Log("send failed\n");
         return -1;
     }
     if (written != buffer_size) 
     {
-        printf("written not all bytes(%i of %i)\n", written, buffer_size);
+        Log("written not all bytes(%i of %i)\n", written, buffer_size);
 
 		int written_total = written;
 		while (written_total < buffer_size && written >= 0)
 		{
 			written = send(client_socket, buffer + written_total, buffer_size - written_total, 0);
 			written_total += written;
-			printf("written %i bytes more (%i of %i total)\n", written, written_total, buffer_size);
+			Log("written %i bytes more (%i of %i total)\n", written, written_total, buffer_size);
 		}
 		if (written < 0)
 		{
@@ -216,51 +187,6 @@ int WebSocketServer::SendFrame(const Client &client, const uint8_t *buffer, size
 
 int WebSocketServer::RecieveData(const Client &client, char *buf, int len)
 {
-	unsigned char frame_buf[BUF_LEN];
-	size_t read_total_len = 0;
-	unsigned int frame_size;
-	unsigned int data_size;
-	enum wsFrameType frame_type = WS_INCOMPLETE_FRAME;
-	unsigned char *data;
-	int socket = client.get_socket();
-
-	while (frame_type == WS_INCOMPLETE_FRAME)
-	{
-		size_t read_len = recv(socket, frame_buf + read_total_len, BUF_LEN - read_total_len, 0);
-		if (read_len <= 0)
-		{
-			if (errno == EAGAIN || errno == EWOULDBLOCK)
-			{
-				return 0;
-			}
-			else
-			{
-				return -1;
-			}
-		}
-		read_total_len += read_len;
-		assert(read_total_len <= BUF_LEN);
-		frame_type = wsParseInputFrame(frame_buf, read_total_len, &data, &data_size);
-
-		if ((frame_type == WS_INCOMPLETE_FRAME && read_total_len >= BUF_LEN) || frame_type == WS_ERROR_FRAME)
-		{
-			return -5;
-		}
-
-	}
-	if (frame_type == WS_TEXT_FRAME)
-	{
-		if (data_size >= len)
-			return -2;
-		memcpy(buf, data, data_size);
-		buf[data_size] = 0;
-		return data_size;
-	}
-	if (frame_type == WS_CLOSING_FRAME)
-	{
-		return -4;
-	}
-	return -3;
 }
 
 int WebSocketServer::Send(const Client &recepient, char *message, int len)
@@ -270,7 +196,7 @@ int WebSocketServer::Send(const Client &recepient, char *message, int len)
 
 	wsMakeFrame((unsigned char*)message, len, frame_buf, &frame_len, WS_TEXT_FRAME);
 	return SendFrame(recepient, frame_buf, frame_len);
-}
+}*/
 
 void *WebSocketServer::ListenMessages(void *arg)
 {
@@ -282,7 +208,9 @@ void *WebSocketServer::ListenMessages(void *arg)
 	
 	while (!(me->stop))
 	{
+		//Log("%i clients\n", me->clients.size());
 		me->WaitUntilListIsNotEmpty();
+		//Log("Filling set\n");
 		FD_ZERO(&fds);
 		for (auto it = me->clients.begin(); it != me->clients.end(); it++)
 		{
@@ -298,22 +226,45 @@ void *WebSocketServer::ListenMessages(void *arg)
 		{
 			if (FD_ISSET(it->get_socket(), &fds))
 			{
-				ret = RecieveData(*it, data_buf, BUF_LEN);
-				if (ret > 0)
+				//Log("recv...\n");
+				//That looks strange, but that's how sets work,
+				//you can't modify element while it's in the set.
+				//It is way better to use map here since we
+				//don't really ever change the socket field of Client
+				//and huge send-recv buffers are being copied 
+				//every time this shit happens.
+				//TODO: fix.
+				Client copy = *it;
+				me->clients.erase(it++);
+				//do{
+				ret = copy.Receive(data_buf, BUF_LEN);
+				if (ret >= 0)
 				{
-					me->OnMessage(*it, data_buf, ret);
-					it++;
+					me->OnMessage(copy, data_buf, ret);
+					me->clients.insert(copy);
+					//it++;
+				}
+				else if (ret == -7)
+				{
+					//Handshaking
+					me->clients.insert(copy);
+				}
+				else if (ret == -8)
+				{
+					//eagain or incomplete frame
+					me->clients.insert(copy);
 				}
 				else if (ret < 0)
 				{
-					DisconnectClient(*it);
-					me->clients.erase(it++);
+					Log("Receive returned %i\n", ret);
+					copy.Disconnect();
+					//me->clients.erase(it++);
 				}
+				//}while (ret >= 0);
 			}
 		}
 		me->ReleaseClientsList();
 	}
-	me->ReleaseClientsList();
 	
 	return NULL;
 }
@@ -323,6 +274,7 @@ int WebSocketServer::Run()
 	stop = false;
 	if (pthread_create(&connection_listener, NULL, WebSocketServer::ListenConnections, this) < 0)
 	{
+		Log("Could not start connection listener\n");
 		last_error = errno;
 		connection_listener = -1;
 		return -1;
