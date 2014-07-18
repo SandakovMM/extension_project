@@ -8,10 +8,12 @@ class IndexController extends pm_Controller_Action
     {
         parent::init();
         $this->view->pageTitle = 'Example Module';
-	// Include js files.
-	$scriptURL = pm_Context::getBaseUrl() . 'js/uiScript.js';
-	$this->view->headScript()->appendFile($scriptURL);
-
+    	// Include js files.
+    	$fileURL = pm_Context::getBaseUrl() . 'js/uiScript.js';
+    	$this->view->headScript()->appendFile($fileURL);
+        // Add css files
+        $fileURL = pm_Context::getBaseUrl() . 'css/putLogsStyle.css';
+        $this->view->headLink()->appendStylesheet($fileURL);
         // Init tabs for all actions // No needed
       /*  $this->view->tabs = array(
             array(

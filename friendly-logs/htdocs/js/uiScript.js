@@ -4,11 +4,11 @@ function Reaction() {  }
 Reaction.clickFileCheck = function (clickedElem)
 {
 	if (!clickedElem.checked) {
-		//sender.stopReadSend(clickedElem.value) // Sending file names to server like that.
+		//SocketWorker.stopReadSend(clickedElem.value) // Sending file names to server like that.
 		$('setupAll').checked = false;
 	}
 	else {
-		//sender.startReadSend(clickedElem.value) // Sending file names to server like that.
+		//SocketWorker.startReadSend(clickedElem.value) // Sending file names to server like that.
 	}
 }
 
@@ -16,14 +16,14 @@ Reaction.clickAllFiles = function(clickedElem)
 {
 	// found our label 
 	//var elemId = clickedElem.id;
-	//var allLabels = $$('label[for=' + elemId + ']')[0];
+	//var allLabels = $$('label[for=' + elemId + ']')[0]; // sirios sheet need to remember it
 	if (!clickedElem.checked) // if we uncheck box
 		return;
 	var elemValue = clickedElem.value;
 	for (var i = 1; i <= elemValue; i++) {
 		var logName = $('log' + i);
 		logName.checked = true;
-		//sender.startReadSend(logName.value) // Sending file names to server like that.
+		//SocketWorker.startReadSend(logName.value) // Sending file names to server like that.
 	}/**/
 	EntryWorker.addEntry('Entry!');
 }
@@ -36,7 +36,8 @@ EntryWorker.addEntry = function(entry)
 	var list = $('logList');
 	var newOption = document.createElement('option');
 	newOption.innerHTML = entry;
-	newOption.style.backgroundColor = 'red';
+	//newOption.style.backgroundColor = '#ff3019';
+	newOption.className = 'good';
 	list.appendChild(newOption);
 }
 
@@ -52,4 +53,14 @@ function SocketWorker(addr, host, filename)
 	workSocket.onclose = function(event) {alert('Socket was closed!');};
 	workSocket.onmessage = function(event) {EntryWorker.addEntry(event.data);}; // adding entry on message
 	workSocket.onclose = function(err) {alert('Socket error!');};
+}
+SocketWorker.startReadSend = function(host, filename) // function send server file name and start reading logs
+{
+	//workSocket.send('start'); //Send somthing meens that we need to start reading;
+	workSocket.send('/var/www/vhosts/' + host + '/logs/' + filename); // some like this
+}
+SocketWorker.stopReadSend = function(host, filename) // function send server file name and start reading logs
+{
+	//workSocket.send('stop'); //Send somthing meens that we need to start reading;
+	workSocket.send('/var/www/vhosts/' + host + '/logs/' + filename); // some like this
 }
