@@ -59,76 +59,56 @@ class IndexController extends pm_Controller_Action
    
     private function castFileNamesGroup($form) // add checks with log file name to a form
     {
-	$this->logNamesGroup = $form->getDisplayGroup('group');
-	// Geting domain name what we work.
-	$domain = pm_Session::getCurrentDomain();
-	$domainName = $domain->getName();
-	
-	// get needed names with shell command ls
-	$logs_names = scandir/*glob*/('/var/www/vhosts/system/' .
-		$domainName . '/logs');
-	$logNameArray = array();
-	// Make display group with log file names
-	foreach ($logs_names as $one_name) {
-		if (!empty($one_name) && '.' != $one_name && '..' != $one_name) {
-			$counter = $counter + 1;	
-			$checkbox = $form->createElement('checkbox', 'log' . $counter,
-					 array('label' => $one_name,));
-			$checkbox->setAttrib('onclick', 'example(this)');
-			$form->addElement($checkbox);
-				
-			if (is_null($this->logNamesGroup)) {
-				$logNameArray[] = $checkbox->getName();
-				$form->addDisplayGroup($logNameArray, 'group', array('legend'=>'Log file names'));
-				$this->logNamesGroup = $form->getDisplayGroup('group');
-			}
-			$this->logNamesGroup->addElement($checkbox);/* Find the way how do it normal*/			
-		}
-	}
+    	$this->logNamesGroup = $form->getDisplayGroup('group');
+    	// Geting domain name what we work.
+    	$domain = pm_Session::getCurrentDomain();
+    	$domainName = $domain->getName();
+    	
+    	// get needed names with shell command ls
+    	$logs_names = scandir/*glob*/('/var/www/vhosts/system/' .
+    		$domainName . '/logs');
+    	$logNameArray = array();
+    	// Make display group with log file names
+    	foreach ($logs_names as $one_name) {
+    		if (!empty($one_name) && '.' != $one_name && '..' != $one_name) {
+    			$counter = $counter + 1;	// Make element
+    			$checkbox = $form->createElement('checkbox', 'log' . $counter,
+    					 array('label' => $one_name));
+                $checkbox->setCheckedValue($one_name);
+    			$checkbox->setAttrib('onclick', 'Reaction.clickFileCheck(this)');
+    			$form->addElement($checkbox);
+    				// Add element to group
+    			if (is_null($this->logNamesGroup)) {
+    				$logNameArray[] = $checkbox->getName();
+    				$form->addDisplayGroup($logNameArray, 'group', array('legend'=>'Log file names'));
+    				$this->logNamesGroup = $form->getDisplayGroup('group');
+    			}
+    			$this->logNamesGroup->addElement($checkbox);/* Find the way how do it normal*/			
+    		}
+    	}
 
-	// Last button, who must set all others seted or somthing like this
-	$checkbox = $form->createElement('checkbox', 'setupAll', array(
-			'label' => 'Total count is:' . $counter ,));
-	$checkbox->setAttrib('onclick', 'example1(this)');
-	$form->addElement($checkbox);
-	$this->logNamesGroup->addElement($checkbox);/* Find the way how do it normal*/
+    	// Last button, who must set all others seted or somthing like this
+    	$checkbox = $form->createElement('checkbox', 'setupAll', array(
+    			'label' => 'Total count is:' . $counter));
+        $checkbox->setCheckedValue($counter);
+    	$checkbox->setAttrib('onclick', 'Reaction.clickAllFiles(this)');
+    	$form->addElement($checkbox);
+    	$this->logNamesGroup->addElement($checkbox);/* Find the way how do it normal*/
 
-	// Decorator for our display group with checkboxes
-	$this->logNamesGroup->setDecorators(array(
-		'FormElements', 'Fieldset',
-		array('HtmlTag', array('tag'=>'div', 'style'=>'width:30%;height:80vh;float:left;
-										overflow-y:auto;'))
-	));
+    	// Decorator for our display group with checkboxes
+    	$this->logNamesGroup->setDecorators(array(
+    		'FormElements', 'Fieldset',
+    		array('HtmlTag', array('tag'=>'div', 'style'=>'width:30%;height:80vh;float:left;
+    										overflow-y:auto;'))
+    	));
     }
     private function castLogOutputPlace($form)
     {
-	/*$this->checkGroup = $form->getDisplayGroup('check');
-
-	for ($i = 0; $i < 1; $i++) {
-		$somthing = $form->createElement('simpleText', 'simText' . $i,
-					 ['label' => 'somthing', 'value' => 'other' . $i]);
-		$form->addElement($somthing);
-		if(is_null($this->checkGroup)) {
-			$form->addDisplayGroup(array('simText' . $i), 'check', array('legend'=>'Checking'));	
-			$this->checkGroup = $form->getDisplayGroup('check');	
-		}
-		else {
-			$this->checkGroup->addElement($somthing);
-		}
-	}/**/
-	$selectElem = new Zend_Form_Element_Select('logNamesList', array(
-			'label'=>'Log names', 'size'=>'2', 
-			'style'=>'width:65%;height:80vh;float:right;overflow-y:auto;'));
-	$selectElem->addMultiOptions(array('0'=>'some','1'=>'other','2'=>'fuck','3'=>'you', '4'=>'ok?'));
-	$form->addElement($selectElem);
-	//$selectElem = $form->addElement('select', 'logSelect');
-/*	$this->checkGroup->addElement($selectElem);
-	$this->checkGroup->setDecorators(array(
-		'FormElements', 'Fieldset',
-		array('HtmlTag', array('tag'=>'div', 'style'=>'width:65%;height:80vh;
-							float:right;overflow-y:auto;'))
-	));/**/
-
+    	$selectElem = new Zend_Form_Element_Select('logList', array(
+    			'label'=>'Logs', 'size'=>'2', 
+    			'style'=>'width:65%;height:80vh;float:right;overflow-y:auto;'));
+    	$selectElem->addMultiOptions(array('0'=>'some','1'=>'other','2'=>'fuck','3'=>'you', '4'=>'ok?'));
+    	$form->addElement($selectElem);
     }
     public function listAction()
     {
