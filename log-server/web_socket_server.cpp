@@ -73,21 +73,14 @@ void *WebSocketServer::ListenConnections(void *arg)
 		Log("Someone has connected\n");
 		if (ret == 0)
 		{
-			//ret = me->DoHandshake(new_client);
-			//if (ret == 0)
-			//{
-				new_client.SetNonBlocking();
-				//Log("Handshaked. Locking clients list\n");
-				me->LockClientsList();
-				me->clients.insert(new_client);
-				if (me->clients.size() == 1)
-				{
-					me->TellThatListIsNotEmpty();
-				}
-				me->ReleaseClientsList();
-			//}
-			//else
-			//	Log("Failed handshaking (returned %i)\n", ret);
+			new_client.SetNonBlocking();
+			me->LockClientsList();
+			me->clients.insert(new_client);
+			if (me->clients.size() == 1)
+			{
+				me->TellThatListIsNotEmpty();
+			}
+			me->ReleaseClientsList();
 		}
 		else
 			Log("Disconnected without handshaking. Errno tells: %s\n", strerror(new_client.get_last_error()));
@@ -203,6 +196,7 @@ void *WebSocketServer::ListenMessages(void *arg)
 	WebSocketServer *me = (WebSocketServer*)arg;
 	char data_buf[BUF_LEN];
 	int ret;
+	int data_len;
 	fd_set fds;
 	int nfds;
 	
@@ -236,31 +230,48 @@ void *WebSocketServer::ListenMessages(void *arg)
 				//TODO: fix.
 				Client copy = *it;
 				me->clients.erase(it++);
-				//do{
-				ret = copy.Receive(data_buf, BUF_LEN);
+				Log("Next client\n");
+				do{
+					data_len = BUF_LEN;
+					ret = copy.Receive(data_buf, &data_len);
+					Log("Receive returned %i\n", ret);
+					if (ret == READ_SUCCEED || ret == READ_SUCCEED_DATA_AVAILABLE)
+					{
+						me->OnMessage(copy, data_buf, data_len);
+						//me->clients.insert(copy);
+					}
+					else if (ret < 0)
+					{
+						//ret < 0 in this branch
+						copy.Disconnect();
+					}
+					/*if (ret >= 0)
+					{
+						me->OnMessage(copy, data_buf, ret);
+						me->clients.insert(copy);
+						//it++;
+					}
+					else if (ret == -7)
+					{
+						//Handshaking
+						me->clients.insert(copy);
+					}
+					else if (ret == -8)
+					{
+						//eagain or incomplete frame
+						me->clients.insert(copy);
+					}
+					else if (ret < 0)
+					{
+						Log("Receive returned %i\n", ret);
+						copy.Disconnect();
+						//me->clients.erase(it++);
+					}*/
+				}while (ret == READ_SUCCEED_DATA_AVAILABLE || ret == HANDSHAKE_SUCCEED);
 				if (ret >= 0)
 				{
-					me->OnMessage(copy, data_buf, ret);
-					me->clients.insert(copy);
-					//it++;
-				}
-				else if (ret == -7)
-				{
-					//Handshaking
 					me->clients.insert(copy);
 				}
-				else if (ret == -8)
-				{
-					//eagain or incomplete frame
-					me->clients.insert(copy);
-				}
-				else if (ret < 0)
-				{
-					Log("Receive returned %i\n", ret);
-					copy.Disconnect();
-					//me->clients.erase(it++);
-				}
-				//}while (ret >= 0);
 			}
 		}
 		me->ReleaseClientsList();

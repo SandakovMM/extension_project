@@ -56,7 +56,7 @@ void Client::CloseSocket()
 	}
 }
 
-int Client::Receive(char *buf, int len)
+int Client::Receive(char *buf, int *len)
 {
 	if (!handshaked)
 	{
@@ -66,15 +66,20 @@ int Client::Receive(char *buf, int len)
 		//return 0 (like we got an empty message)
 		if (Handshake() < 0)
 		{
-			return -6;
+			return HANDSHAKE_FAILED;
 		}
 		else
 		{
 			if (handshaked)
+			{
 				Log("handshaked\n");
+				return HANDSHAKE_SUCCEED;
+			}
 			else
+			{
 				Log("waiting for more data to hanshake\n");
-			return -7;
+				return WAITING_FOR_MORE_DATA;
+			}
 		}
 	}
 	//Log("Receiving\n");
@@ -84,121 +89,163 @@ int Client::Receive(char *buf, int len)
 	unsigned int data_size;
 	enum wsFrameType frame_type = WS_INCOMPLETE_FRAME;
 	unsigned char *data;
-	//int socket = client.get_socket();
 
-	//while (frame_type == WS_INCOMPLETE_FRAME)
-	size_t read_len = recv(socket, frame_buf + frame_buf_pos, BUF_LEN - frame_buf_pos, 0);
-	if (read_len <= 0)
+	int read_len = recv(socket, frame_buf + frame_buf_pos, BUF_LEN - frame_buf_pos, 0);
+	Log("read_len: %i, %i, %i\n", read_len, errno == EAGAIN, errno == EWOULDBLOCK);
+	if (read_len < 0)
 	{
-		if (errno == EAGAIN || errno == EWOULDBLOCK)
+		if (frame_buf_pos == 0)
 		{
-			return -8;
-		}
-		else
-		{
-			return -1;
+			//if frame_buf_pos is not 0, we are trying to read a frame from
+			//what's left in the buffer after previous call and thus we
+			//should not return here
+			if (errno == EAGAIN || errno == EWOULDBLOCK)
+			{
+				Log("Returning %i\n", WAITING_FOR_MORE_DATA);
+				return WAITING_FOR_MORE_DATA;
+			}
+			else
+			{
+				return NETWORK_ERROR;
+			}
 		}
 	}
-	frame_buf_pos += read_len;
-	//Log("Read total: %i bytes\n", frame_buf_pos);
+	else if (read_len == 0)
+	{
+		return CLIENT_DISCONNECTED;
+	}
+	else
+	{
+		//change frame_buf_pos only if we actually received something
+		frame_buf_pos += read_len;
+	}
 
-	//assert(read_total_len <= BUF_LEN);
+	Log("Frame buffer: ");
+	for (int i = 0; i < frame_buf_pos; i++)
+		Log("%x ", frame_buf[i]);
+	Log("\n(frame_buf_pos: %i)\n", frame_buf_pos);
+
 	frame_type = wsParseInputFrame(frame_buf, frame_buf_pos, &data, &data_size, &frame_size);
 	if ((frame_type == WS_INCOMPLETE_FRAME && frame_buf_pos >= BUF_LEN) || frame_type == WS_ERROR_FRAME)
 	{
 		//if frame is not complete and we already hit buffer size limit
 		//then we can't receive this frame.
 		//also reject frame if it is malformed
-		return -5;
+		return INVALID_FRAME;
 	}
 
 	if (frame_type == WS_INCOMPLETE_FRAME)
 	{
-		return -8;
+		return WAITING_FOR_MORE_DATA;
 	}
 	if (frame_type == WS_TEXT_FRAME)
 	{
-		frame_buf_pos -= frame_size;
-		Log("frame_buf_pos: %i, frame_size: %i\n", frame_buf_pos, frame_size);
-		if (data_size >= len)
-			return -2;
+		if (data_size >= *len)
+		{
+			frame_buf_pos -= frame_size;
+			memcpy(frame_buf, frame_buf + frame_size, frame_buf_pos);
+			Log("frame_buf_pos: %i, frame_size: %i\n", frame_buf_pos, frame_size);
+			return BUFFER_TOO_SMALL;
+		}
+
 		memcpy(buf, data, data_size);
 		buf[data_size] = 0;
-		return data_size;
+
+		assert(frame_size <= frame_buf_pos);
+		frame_buf_pos -= frame_size;
+		memcpy(frame_buf, frame_buf + frame_size, frame_buf_pos);
+		Log("frame_buf_pos: %i, frame_size: %i\n", frame_buf_pos, frame_size);
+
+		*len = data_size;
+		if (frame_buf_pos == 0)
+		{
+			return READ_SUCCEED;
+		}
+		else
+		{
+			return READ_SUCCEED_DATA_AVAILABLE;
+		}
 	}
 	if (frame_type == WS_CLOSING_FRAME)
 	{
-		return -4;
+		return CLIENT_DISCONNECTED;
 	}
-	return -3;
+	return INVALID_FRAME;
 }
 
 int Client::Handshake()
 {
-	//unsigned char frame_buf[BUF_LEN];
-	//size_t read_total_len = 0;
 	unsigned int frame_size;
 	enum wsFrameType frame_type = WS_INCOMPLETE_FRAME;
 	struct handshake hs;
-	//int socket = client.get_socket();
 	nullHandshake(&hs);
 
-	//while (frame_type == WS_INCOMPLETE_FRAME)
+	int readed = recv(socket, frame_buf + frame_buf_pos, BUF_LEN - frame_buf_pos, 0);
+	if (readed < 0)
 	{
-	        ssize_t readed = recv(socket, frame_buf + frame_buf_pos, BUF_LEN - frame_buf_pos, 0);
-	        if (!readed)
+		if (errno == EAGAIN || errno == EWOULDBLOCK)
 		{
-       			//close(socket);
-			CloseSocket();
-			return -1;
+			return WAITING_FOR_MORE_DATA;
 		}
-        	frame_buf_pos += readed;
-		frame_buf[frame_buf_pos] = 0;
-		Log("hs: %s\n", frame_buf);
-		//assert(read_total_len <= BUF_LEN);
-		frame_type = wsParseHandshake(frame_buf, frame_buf_pos, &hs, &frame_size);
+		else
+		{
+			return NETWORK_ERROR;
+		}
+	}
+	else if (readed == 0)
+	{
+		return CLIENT_DISCONNECTED;
+	}
 
-		if ((frame_type == WS_INCOMPLETE_FRAME && frame_buf_pos >= BUF_LEN) || frame_type == WS_ERROR_FRAME)
-		{
-			//printf("Buffer is too small or invalid frame\n");
-			//prepareBuffer;
-			size_t send_size = BUF_LEN;
-			memset(send_buf, 0, BUF_LEN);
-			send_size = sprintf((char *)send_buf,
-							"HTTP/1.1 400 Bad Request\r\n"
-							"%s%s\r\n\r\n",
-							versionField,
-							version);
-			SendFrame(send_buf, send_size);
-			//close(socket);
-			CloseSocket();
-			return -1;
-		}
-        }
+       	frame_buf_pos += readed;
+	frame_buf[frame_buf_pos] = 0;
+
+	frame_type = wsParseHandshake(frame_buf, frame_buf_pos, &hs, &frame_size);
+	if ((frame_type == WS_INCOMPLETE_FRAME && frame_buf_pos >= BUF_LEN) || frame_type == WS_ERROR_FRAME)
+	{
+		size_t send_size = BUF_LEN;
+		memset(send_buf, 0, BUF_LEN);
+		send_size = sprintf((char *)send_buf,
+						"HTTP/1.1 400 Bad Request\r\n"
+						"%s%s\r\n\r\n",
+						versionField,
+						version);
+		SendFrame(send_buf, send_size);
+		return INVALID_FRAME;
+	}
+        
 	if (frame_type == WS_INCOMPLETE_FRAME)
 	{
-		return 0;
+		return WAITING_FOR_MORE_DATA;
 	}
 	if (frame_type == WS_OPENING_FRAME)
 	{
-		frame_buf_pos -= frame_size;
-		Log("Handshake done: pos is %i\n", frame_buf_pos);
-		//unsigned char send_buf[BUF_LEN];
 		size_t send_size = BUF_LEN;
 		memset(send_buf, 0, BUF_LEN);
 		wsGetHandshakeAnswer(&hs, send_buf, &send_size);
 		freeHandshake(&hs);
+
+		assert(frame_size <= frame_buf_pos);
+		frame_buf_pos -= frame_size;
+		memcpy(frame_buf, frame_buf + frame_size, frame_buf_pos);
+
 		if (SendFrame(send_buf, send_size) == -1)
-			return -1;
+			return NETWORK_ERROR;
 		handshaked = true;
-		return 0;
+		if (frame_buf_pos == 0)
+		{
+			return READ_SUCCEED;
+		}
+		else
+		{
+			return READ_SUCCEED_DATA_AVAILABLE;
+		}
 	}
-	return -1;
+	return INVALID_FRAME;
 }
 
 int Client::SendFrame(const unsigned char *buffer, size_t buffer_size)
 {
-    //int client_socket = client.get_socket();
     ssize_t written = send(socket, buffer, buffer_size, 0);
     if (written == -1)
     {
@@ -237,7 +284,7 @@ int Client::Send(char *message, int len)
 void Client::Disconnect()
 {
 	//unsigned char frame_buf[BUF_LEN];
-	unsigned int frame_size;
+	unsigned int frame_size = BUF_LEN;
 	
 	//TODO: if connection reset by other side then just close socket
 	wsMakeFrame(NULL, 0, send_buf, &frame_size, WS_CLOSING_FRAME);
