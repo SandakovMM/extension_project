@@ -1,0 +1,14 @@
+div {
+	background-color: #FF0000 
+}
+.good {
+	color:green;
+}
+
+.warning {
+	color:yellow;
+}
+
+.error {
+	color:red;
+}
