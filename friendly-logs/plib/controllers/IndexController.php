@@ -7,12 +7,13 @@ class IndexController extends pm_Controller_Action
     public function init()
     {
         parent::init();
-        $this->view->pageTitle = 'Example Module';
+        $this->view->pageTitle = 'Log viewer';
     	// Include js files.
-    	$fileURL = pm_Context::getBaseUrl() . 'js/uiScript.js';
+        $extURL = pm_Context::getBaseUrl();
+    	$fileURL = $extURL . 'js/uiScript.js';
     	$this->view->headScript()->appendFile($fileURL);
         // Add css files
-        $fileURL = pm_Context::getBaseUrl() . 'css/putLogsStyle.css';
+        $fileURL = $extURL . 'css/putLogsStyle.css';
         $this->view->headLink()->appendStylesheet($fileURL);
         // Init tabs for all actions // No needed
       /*  $this->view->tabs = array(
@@ -74,7 +75,7 @@ class ExtensionForm extends pm_Form_Simple
                 $counter = $counter + 1;    // Make element
                 $checkbox = $this->createElement('checkbox', 'log' . $counter,
                          array('label' => $one_name));
-                $checkbox->setCheckedValue($one_name);
+                $checkbox->setCheckedValue($domainName . ' ' . $one_name); // Like that now, change later maybe
                 $checkbox->setAttrib('onclick', 'Reaction.clickFileCheck(this)');
                 $this->addElement($checkbox);
                     // Add element to group

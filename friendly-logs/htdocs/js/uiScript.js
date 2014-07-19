@@ -3,12 +3,17 @@ function Reaction() {  }
 	//function clickFileCheck(clickedElem)
 Reaction.clickFileCheck = function (clickedElem)
 {
+	// Now geting domain and file like this
+	var value = clickedElem.value;
+	var destPoints = value.split(' ');
+
 	if (!clickedElem.checked) {
 		//SocketWorker.stopReadSend(clickedElem.value) // Sending file names to server like that.
 		$('setupAll').checked = false;
 	}
 	else {
-		//SocketWorker.startReadSend(clickedElem.value) // Sending file names to server like that.
+		SocketWorker("127.0.0.1:10000", destPoints[0], destPoints[1]); // Try to connect
+		//SocketWorker.startReadSend(destPoints[0], destPoints[1]) // Sending file names to server like that.
 	}
 }
 
@@ -25,6 +30,7 @@ Reaction.clickAllFiles = function(clickedElem)
 		logName.checked = true;
 		//SocketWorker.startReadSend(logName.value) // Sending file names to server like that.
 	}/**/
+	//alert("See me!");
 	EntryWorker.addEntry('Entry!');
 }
 
@@ -44,15 +50,22 @@ EntryWorker.addEntry = function(entry)
 // Class sender work with web socket connections
 function SocketWorker(addr, host, filename) 
 { 
-	this.workSocket = new WebSocket(addr);
-	workSocket.onopen = function() {
-		alert('soket was opened');
-		workSocket.send('/var/www/vhosts/' + host + '/logs/' + filename); // some like this
-		alert('name was sended');
-	};
-	workSocket.onclose = function(event) {alert('Socket was closed!');};
-	workSocket.onmessage = function(event) {EntryWorker.addEntry(event.data);}; // adding entry on message
-	workSocket.onclose = function(err) {alert('Socket error!');};
+	if ("WebSocket" in window) {
+		alert("Start connection. Addres is " + addr);
+		var workSocket = new WebSocket(addr);
+		alert("Start connection in progress?");
+		workSocket.onopen = function() {
+			alert('soket was opened');
+			workSocket.send('/var/www/vhosts/' + host + '/logs/' + filename); // some like this
+			alert('name was sended');
+		};
+		workSocket.onclose = function(event) {alert('Socket was closed!');};
+		workSocket.onmessage = function(event) {EntryWorker.addEntry(event.data);}; // adding entry on message
+		workSocket.onclose = function(err) {alert('Socket error!');};
+	}
+	else {
+		alert("Web socket is not supported!");
+	}
 }
 SocketWorker.startReadSend = function(host, filename) // function send server file name and start reading logs
 {
