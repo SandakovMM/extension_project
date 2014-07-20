@@ -12,8 +12,8 @@ Reaction.clickFileCheck = function (clickedElem)
 		$('setupAll').checked = false;
 	}
 	else {
-		alert(destPoints[0] + ' and ' + destPoints[1])
-		SocketWorker("ws://127.0.0.1:10000/", destPoints[0], destPoints[1]); // Try to connect
+		//alert(destPoints[0] + ' and ' + destPoints[1])
+		SocketWorker("ws://127.0.0.1:10001/", destPoints[0], destPoints[1]); // Try to connect
 		//SocketWorker.startReadSend(destPoints[0], destPoints[1]) // Sending file names to server like that.
 	}
 }
@@ -52,20 +52,22 @@ EntryWorker.addEntry = function(entry)
 function SocketWorker(addr, host, filename) 
 { 
 	if ("WebSocket" in window) {
-		alert("WebSocket is supported by your Browser!");
+		//alert("WebSocket is supported by your Browser!");
      	// Start connection
 	    var workSocket = new WebSocket(addr);
 	    workSocket.onopen = function()
 	    {
 	        // Web Socket is connected, send data using send()
-	        alert("Start send this: " + host + filename);
+	        //alert("Start send this: " + host + filename);
 	        workSocket.send('/var/www/vhosts/' + host + '/logs/' + filename);
-	        alert("Message is sent...");
+	        //alert("Message is sent...");
 	    };
 	    workSocket.onmessage = function (evt) 
 	    { 
+	    	
 	        var received_msg = evt.data;
-	        alert("Message is received...");
+	        //alert("Message is received: " + received_msg);
+	        EntryWorker.addEntry(received_msg);        
 	    };
 	    workSocket.onclose = function()
 	    { 
