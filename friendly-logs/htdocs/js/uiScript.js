@@ -12,7 +12,8 @@ Reaction.clickFileCheck = function (clickedElem)
 		$('setupAll').checked = false;
 	}
 	else {
-		SocketWorker("127.0.0.1:10000", destPoints[0], destPoints[1]); // Try to connect
+		alert(destPoints[0] + ' and ' + destPoints[1])
+		SocketWorker("ws://127.0.0.1:10000/", destPoints[0], destPoints[1]); // Try to connect
 		//SocketWorker.startReadSend(destPoints[0], destPoints[1]) // Sending file names to server like that.
 	}
 }
@@ -51,17 +52,26 @@ EntryWorker.addEntry = function(entry)
 function SocketWorker(addr, host, filename) 
 { 
 	if ("WebSocket" in window) {
-		alert("Start connection. Addres is " + addr);
-		var workSocket = new WebSocket(addr);
-		alert("Start connection in progress?");
-		workSocket.onopen = function() {
-			alert('soket was opened');
-			workSocket.send('/var/www/vhosts/' + host + '/logs/' + filename); // some like this
-			alert('name was sended');
-		};
-		workSocket.onclose = function(event) {alert('Socket was closed!');};
-		workSocket.onmessage = function(event) {EntryWorker.addEntry(event.data);}; // adding entry on message
-		workSocket.onclose = function(err) {alert('Socket error!');};
+		alert("WebSocket is supported by your Browser!");
+     	// Start connection
+	    var workSocket = new WebSocket(addr);
+	    workSocket.onopen = function()
+	    {
+	        // Web Socket is connected, send data using send()
+	        alert("Start send this: " + host + filename);
+	        workSocket.send('/var/www/vhosts/' + host + '/logs/' + filename);
+	        alert("Message is sent...");
+	    };
+	    workSocket.onmessage = function (evt) 
+	    { 
+	        var received_msg = evt.data;
+	        alert("Message is received...");
+	    };
+	    workSocket.onclose = function()
+	    { 
+	        // websocket is closed.
+	        alert("Connection is closed..."); 
+	    };
 	}
 	else {
 		alert("Web socket is not supported!");
