@@ -108,7 +108,6 @@ class ExtensionForm extends pm_Form_Simple
         $selectElem = new Zend_Form_Element_Select('logList', array(
                 'label'=>'Logs', 'size'=>'2', 
                 'style'=>'width:65%;height:80vh;float:right;overflow-y:auto;'));
-        $selectElem->addMultiOptions(array('0'=>'some','1'=>'other','2'=>'fuck','3'=>'you', '4'=>'ok?'));
         $this->addElement($selectElem);
     }
 }

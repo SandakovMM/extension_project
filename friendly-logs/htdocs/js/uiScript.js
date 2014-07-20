@@ -43,8 +43,16 @@ EntryWorker.addEntry = function(entry)
 	var list = $('logList');
 	var newOption = document.createElement('option');
 	newOption.innerHTML = entry;
-	//newOption.style.backgroundColor = '#ff3019';
-	newOption.className = 'good';
+	// choosing style of entry
+	var rand = Math.random() * 10 + 1;
+	if (rand < 3)
+		newOption.style.background = 'linear-gradient(to right, red, #ffffff';
+	else if (rand < 6)
+		newOption.style.background = 'linear-gradient(to right, yellow, #ffffff)';
+	else 
+		newOption.style.background = 'linear-gradient(to right, green, #ffffff)';
+	
+	//newOption.className = 'good';
 	list.appendChild(newOption);
 }
 
