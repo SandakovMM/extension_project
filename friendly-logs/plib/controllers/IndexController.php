@@ -10,7 +10,7 @@ class IndexController extends pm_Controller_Action
         $this->view->pageTitle = 'Log viewer';
     	// Include js files.
         $extURL = pm_Context::getBaseUrl();
-    	$fileURL = $extURL . 'js/uiScript.js';
+    	$fileURL = $extURL . 'js/uiScript.js?v3';
     	$this->view->headScript()->appendFile($fileURL);
         // Add css files
         $fileURL = $extURL . 'css/putLogsStyle.css';
@@ -75,7 +75,7 @@ class ExtensionForm extends pm_Form_Simple
                 $counter = $counter + 1;    // Make element
                 $checkbox = $this->createElement('checkbox', 'log' . $counter,
                          array('label' => $one_name));
-                $checkbox->setCheckedValue($domainName . ' ' . $one_name); // Like that now, change later maybe
+                $checkbox->setCheckedValue($one_name); // Like that now, change later maybe
                 $checkbox->setAttrib('onclick', 'Reaction.clickFileCheck(this)');
                 $this->addElement($checkbox);
                     // Add element to group
@@ -96,11 +96,17 @@ class ExtensionForm extends pm_Form_Simple
         $this->addElement($checkbox);
         $this->logNamesGroup->addElement($checkbox);/* Find the way how do it normal*/
 
+                                // Add element with nedded for server information.
+        $serverIP = $_SERVER['SERVER_ADDR'];
+        $hidden = $this->createElement('hidden', 'someInformation');
+        $hidden->setValue($domainName . ' ' . $serverIP);
+        $this->addElement($hidden);
+
         // Decorator for our display group with checkboxes
         $this->logNamesGroup->setDecorators(array(
             'FormElements', 'Fieldset',
-            array('HtmlTag', array('tag'=>'div', 'style'=>'width:30%;height:80vh;float:left;
-                                            overflow-y:auto;'))
+            array('HtmlTag', array('tag'=>'div', 'style'=>'width:30%;height:80vh;
+                                                        float:left;overflow-y:auto;'))
         ));
     }
     private function buildLogOutputPlace()
@@ -108,7 +114,6 @@ class ExtensionForm extends pm_Form_Simple
         $selectElem = new Zend_Form_Element_Select('logList', array(
                 'label'=>'Logs', 'size'=>'2', 
                 'style'=>'width:65%;height:80vh;float:right;overflow-y:auto;'));
-        $selectElem->addMultiOptions(array('0'=>'some','1'=>'other','2'=>'fuck','3'=>'you', '4'=>'ok?'));
         $this->addElement($selectElem);
     }
 }
