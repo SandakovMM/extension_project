@@ -4,16 +4,16 @@ function Reaction() {  }
 Reaction.clickFileCheck = function (clickedElem)
 {
 	// Now geting domain and file like this
-	var value = clickedElem.value;
-	var destPoints = value.split(' ');
-
+	var fileName = clickedElem.value;
+	var savedVars = $('someInformation').value;
+	var separated = savedVars.split(' ');
 	if (!clickedElem.checked) {
 		//SocketWorker.stopReadSend(clickedElem.value) // Sending file names to server like that.
 		$('setupAll').checked = false;
 	}
 	else {
-		//alert(destPoints[0] + ' and ' + destPoints[1])
-		SocketWorker("ws://127.0.0.1:10001/", destPoints[0], destPoints[1]); // Try to connect
+		//alert(separated[0] + ' on adress ' + separated[1] + ' and ' + clickedElem.value);
+		SocketWorker("ws://" + separated[1] + ":10000/", separated[0], fileName); // Try to connect
 		//SocketWorker.startReadSend(destPoints[0], destPoints[1]) // Sending file names to server like that.
 	}
 }
@@ -25,12 +25,15 @@ Reaction.clickAllFiles = function(clickedElem)
 	//var allLabels = $$('label[for=' + elemId + ']')[0]; // sirios sheet need to remember it
 	if (!clickedElem.checked) // if we uncheck box
 		return;
+
+	var domainName = $('someInformation');
 	var elemValue = clickedElem.value;
 	for (var i = 1; i <= elemValue; i++) {
 		var logName = $('log' + i);
 		logName.checked = true;
 		//SocketWorker.startReadSend(logName.value) // Sending file names to server like that.
 	}/**/
+
 	//alert("See me!");
 	EntryWorker.addEntry('Entry!');
 }
