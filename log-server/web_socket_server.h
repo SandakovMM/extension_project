@@ -33,6 +33,7 @@ class WebSocketServer
 	pthread_cond_t clients_not_empty_cond;
 	pthread_t connection_listener;
 	pthread_t message_listener;
+	SSL_CTX *tls_ssl_context;
 	std::set<Client,ClientComparator> clients;
 	
 private:
@@ -42,6 +43,7 @@ private:
 	static void *ListenMessages(void *arg);
 	int LockClientsList();
 	int ReleaseClientsList();
+	int InitSSL();
 	void WaitUntilListIsNotEmpty();
 	void TellThatListIsNotEmpty();
 	int ListenSocket();

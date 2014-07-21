@@ -1,8 +1,11 @@
 #include "client.h"
 #include <sys/socket.h>
+#include <sys/select.h>
 #include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
+
+#include <openssl/err.h>
 
 #include <websocket.h>
 
@@ -20,12 +23,16 @@ Client::Client()
 	handshaked = false;
 }
 
-Client::Client(int listener)
+Client::Client(int listener, SSL_CTX *tls_ssl_context)
 {
-	Accept(listener);
+	if (Accept(listener, tls_ssl_context) < 0)
+	{
+		socket = -1;
+		tls_connection = NULL;
+	}
 }
 
-int Client::Accept(int listener)
+int Client::Accept(int listener, SSL_CTX *tls_ssl_context)
 {
 	address_len = sizeof(address);
 	socket = accept(listener, &address, &address_len);
@@ -33,6 +40,50 @@ int Client::Accept(int listener)
 	{
 		last_error = errno;
 		return -1;
+	}
+
+	/*tls_ssl_context = SSL_CTX_new(SSLv3_server_method());
+	if (tls_ssl_context == NULL)
+	{
+		return -2;
+	}*/
+	tls_connection = SSL_new(tls_ssl_context);
+	if (tls_connection == NULL)
+	{
+		return -3;
+	}
+	if (SSL_set_fd(tls_connection, socket) == 0)
+	{
+		return -4;
+	}
+
+	/*int ret, err = SSL_ERROR_WANT_READ, nfds = socket + 1;
+	fd_set write_fd, read_fd;
+	do
+	{
+		FD_ZERO(&write_fd);
+		FD_ZERO(&read_fd);
+		FD_SET(socket, &write_fd);
+		FD_SET(socket, &read_fd);
+		select(nfds, &read_fd, &write_fd, NULL, NULL);
+
+		if (err == SSL_ERROR_WANT_WRITE && !FD_ISSET(socket, &write_fd))
+		{
+			continue;
+		}
+		if (err == SSL_ERROR_WANT_READ && !FD_ISSET(socket, &read_fd))
+		{
+			continue;
+		}
+
+		ret = SSL_accept(tls_connection);
+		err = SSL_get_error(tls_connection, ret);
+	}while(err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE);*/
+	if (SSL_accept(tls_connection) <= 0)
+	{
+		Log("Failed to accept ssl connection\n");
+		//ERR_print_errors_fp (stdout);
+		return -5;
 	}
 	return 0;
 }
@@ -49,6 +100,12 @@ int Client::SetNonBlocking()
 
 void Client::CloseSocket()
 {
+	int ret;
+	ret = SSL_shutdown(tls_connection);
+	if (ret == 0)
+	{
+		ret = SSL_shutdown(tls_connection);
+	}
 	if (socket > 0)
 	{
 		close(socket);
@@ -58,14 +115,17 @@ void Client::CloseSocket()
 
 int Client::Receive(char *buf, int *len)
 {
+	int ret;
 	if (!handshaked)
 	{
 		Log("Handshaking\n");
 		//if we didn't do a hanshake yet, start/continue
 		//doing it. If failed, return error, if succeed,
 		//return 0 (like we got an empty message)
-		if (Handshake() < 0)
+		ret = Handshake();
+		if (ret < 0)
 		{
+			Log("Handshake failed with code %i\n", ret);
 			return HANDSHAKE_FAILED;
 		}
 		else
@@ -90,40 +150,42 @@ int Client::Receive(char *buf, int *len)
 	enum wsFrameType frame_type = WS_INCOMPLETE_FRAME;
 	unsigned char *data;
 
-	int read_len = recv(socket, frame_buf + frame_buf_pos, BUF_LEN - frame_buf_pos, 0);
-	Log("read_len: %i, %i, %i\n", read_len, errno == EAGAIN, errno == EWOULDBLOCK);
-	if (read_len < 0)
+	//int read_len = recv(socket, frame_buf + frame_buf_pos, BUF_LEN - frame_buf_pos, 0);
+	ret = SSL_read(tls_connection, frame_buf + frame_buf_pos, BUF_LEN - frame_buf_pos);
+	int err = SSL_get_error(tls_connection, ret);
+	//Log("err: %i\n", err);
+	if (ret < 0)
 	{
-		if (frame_buf_pos == 0)
+		//if frame_buf_pos is not 0, we are trying to read a frame from
+		//what's left in the buffer after previous call and thus we
+		//should not return here
+		if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_READ)
 		{
-			//if frame_buf_pos is not 0, we are trying to read a frame from
-			//what's left in the buffer after previous call and thus we
-			//should not return here
-			if (errno == EAGAIN || errno == EWOULDBLOCK)
+			if (frame_buf_pos == 0)
 			{
 				Log("Returning %i\n", WAITING_FOR_MORE_DATA);
 				return WAITING_FOR_MORE_DATA;
 			}
-			else
-			{
-				return NETWORK_ERROR;
-			}
+		}
+		else
+		{
+			return NETWORK_ERROR;
 		}
 	}
-	else if (read_len == 0)
+	else if (ret == 0)
 	{
 		return CLIENT_DISCONNECTED;
 	}
 	else
 	{
 		//change frame_buf_pos only if we actually received something
-		frame_buf_pos += read_len;
+		frame_buf_pos += ret;
 	}
 
-	Log("Frame buffer: ");
+	/*Log("Frame buffer: ");
 	for (int i = 0; i < frame_buf_pos; i++)
 		Log("%x ", frame_buf[i]);
-	Log("\n(frame_buf_pos: %i)\n", frame_buf_pos);
+	Log("\n(frame_buf_pos: %i)\n", frame_buf_pos);*/
 
 	frame_type = wsParseInputFrame(frame_buf, frame_buf_pos, &data, &data_size, &frame_size);
 	if ((frame_type == WS_INCOMPLETE_FRAME && frame_buf_pos >= BUF_LEN) || frame_type == WS_ERROR_FRAME)
@@ -180,25 +242,35 @@ int Client::Handshake()
 	struct handshake hs;
 	nullHandshake(&hs);
 
-	int readed = recv(socket, frame_buf + frame_buf_pos, BUF_LEN - frame_buf_pos, 0);
-	if (readed < 0)
+	//int readed = recv(socket, frame_buf + frame_buf_pos, BUF_LEN - frame_buf_pos, 0);
+	int ret = SSL_read(tls_connection, frame_buf + frame_buf_pos, BUF_LEN - frame_buf_pos);
+	int err = SSL_get_error(tls_connection, ret);
+	if (ret < 0)
 	{
-		if (errno == EAGAIN || errno == EWOULDBLOCK)
+		if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_READ)
 		{
 			return WAITING_FOR_MORE_DATA;
 		}
 		else
 		{
+			Log("Recieve error (handshaking): %i\n", err);
 			return NETWORK_ERROR;
 		}
 	}
-	else if (readed == 0)
+	else if (ret == 0)
 	{
+		Log("ssl_read returned 0\n");
+		//ERR_print_errors_fp (stdout);
 		return CLIENT_DISCONNECTED;
 	}
 
-       	frame_buf_pos += readed;
+       	frame_buf_pos += ret;
 	frame_buf[frame_buf_pos] = 0;
+
+	/*Log("Handshaking. Buffer length: %i.\nBuffer content: ", frame_buf_pos);
+	for (int i = 0; i < frame_buf_pos; i++)
+		Log("%x ", frame_buf[i]);
+	Log("\n");*/
 
 	frame_type = wsParseHandshake(frame_buf, frame_buf_pos, &hs, &frame_size);
 	if ((frame_type == WS_INCOMPLETE_FRAME && frame_buf_pos >= BUF_LEN) || frame_type == WS_ERROR_FRAME)
@@ -246,7 +318,7 @@ int Client::Handshake()
 
 int Client::SendFrame(const unsigned char *buffer, size_t buffer_size)
 {
-    ssize_t written = send(socket, buffer, buffer_size, 0);
+    /*ssize_t written = send(socket, buffer, buffer_size, 0);
     if (written == -1)
     {
         Log("send failed\n");
@@ -267,9 +339,36 @@ int Client::SendFrame(const unsigned char *buffer, size_t buffer_size)
 		{
 				return -1;
 		}
-    }
-    
-    return 0;
+    }*/
+	int ret, err = SSL_ERROR_WANT_WRITE, nfds = socket + 1;
+	fd_set write_fd, read_fd;
+	do
+	{
+		FD_ZERO(&write_fd);
+		FD_ZERO(&read_fd);
+		FD_SET(socket, &write_fd);
+		FD_SET(socket, &read_fd);
+		select(nfds, &read_fd, &write_fd, NULL, NULL);
+
+		if (err == SSL_ERROR_WANT_WRITE && !FD_ISSET(socket, &write_fd))
+		{
+			continue;
+		}
+		if (err == SSL_ERROR_WANT_READ && !FD_ISSET(socket, &read_fd))
+		{
+			continue;
+		}
+
+		ret = SSL_write(tls_connection, buffer, buffer_size);
+		err = SSL_get_error(tls_connection, ret);
+	}while(err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE);
+
+	if (ret <= 0)
+	{
+		return -1;
+	}
+
+	return 0;
 }
 
 int Client::Send(char *message, int len)
