@@ -1,3 +1,6 @@
+// Call init socket function ol load of document
+document.observe('dom:loaded', function(){ SocketWorker(); });
+
 // Class reaction work with on click user actions.
 function Reaction() {  }
 	//function clickFileCheck(clickedElem)
@@ -6,7 +9,7 @@ Reaction.clickFileCheck = function (clickedElem)
 	// Now geting domain and file like this
 	var fileName = clickedElem.value;
 	var savedVars = $('someInformation').value;
-	var separated = savedVars.split(' ');
+	var domainName = savedVars.split(' ')[0];
 	if (!clickedElem.checked) {
 		//SocketWorker.stopReadSend(separated[0], fileName)) // Sending file names to server like that.
 		$('setupAll').checked = false;
@@ -14,11 +17,11 @@ Reaction.clickFileCheck = function (clickedElem)
 	else {
 		//alert(separated[0] + ' on adress ' + separated[1] + ' and ' + clickedElem.value);
 		if (!workSocket) {
-			alert('Socket initialyze now');
-			SocketWorker("ws://" + separated[1] + ":10030/"); // Try init socket. // change later
+			alert('Socket is not initialyze yet');
+			//SocketWorker("ws://" + separated[1] + ":10030/"); // Try init socket. // change later
 		}
 		else {
-			SocketWorker.startReadSend(separated[0], fileName) // Sending file names to server like that.
+			SocketWorker.startReadSend(domainName, fileName) // Sending file names to server like that.
 		}
 	}
 }
@@ -65,12 +68,14 @@ EntryWorker.addEntry = function(entry)
 
 // Class sender work with web socket connections
 var workSocket;
-function SocketWorker(addr) // Initialyze socket
+function SocketWorker() // Initialyze socket
 { 
 	if ("WebSocket" in window) {
-		alert("WebSocket is supported by your Browser!");
+		//alert("WebSocket is supported by your Browser!");
+		var savedVars = $('someInformation').value;
+		var ipAdress = savedVars.split(' ')[1];
      	// Start connection
-	    workSocket = new WebSocket(addr);
+	    workSocket = new WebSocket("ws://" + ipAdress + ":10050/");
 	    workSocket.onopen = function()
 	    {
 	        // Web Socket is connected, send data using send()

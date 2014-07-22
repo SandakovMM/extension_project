@@ -10,7 +10,7 @@ class IndexController extends pm_Controller_Action
         $this->view->pageTitle = 'Log viewer';
     	// Include js files.
         $extURL = pm_Context::getBaseUrl();
-    	$fileURL = $extURL . 'js/uiScript.js?v4';
+    	$fileURL = $extURL . 'js/uiScript.js?v5';
     	$this->view->headScript()->appendFile($fileURL);
         // Add css files
         $fileURL = $extURL . 'css/putLogsStyle.css';
