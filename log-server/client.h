@@ -1,5 +1,7 @@
 #include <sys/socket.h>
 
+#include <openssl/ssl.h>
+
 #define BUF_LEN 2048
 
 #define READ_SUCCEED 0
@@ -23,10 +25,12 @@ class Client
 	unsigned char send_buf[BUF_LEN + 1];
 	int frame_buf_pos;
 	bool handshaked;
+	SSL_CTX *tls_ssl_context;
+	SSL *tls_connection;
 public:
 	Client();
-	Client(int listener);
-	int Accept(int listener);
+	Client(int listener, SSL_CTX *tls_ssl_context);
+	int Accept(int listener, SSL_CTX *tls_ssl_context);
 	int SetNonBlocking();
 	void CloseSocket();
 	int Receive(char *buf, int *len);

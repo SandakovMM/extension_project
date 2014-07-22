@@ -4,6 +4,9 @@
 #include <netinet/in.h>
 #include <errno.h>
 
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+
 #include "web_socket_server.h"
 
 #define BUF_LEN 2048
@@ -54,11 +57,44 @@ int WebSocketServer::ListenSocket()
 	return 0;
 }
 
+int WebSocketServer::InitSSL()
+{
+	SSL_library_init();
+	SSL_load_error_strings();
+	OpenSSL_add_all_algorithms();
+	tls_ssl_context = SSL_CTX_new(SSLv3_server_method());
+	if (tls_ssl_context == NULL)
+	{
+		return -1;
+	}
+	if (SSL_CTX_set_cipher_list(tls_ssl_context, "ALL") == 0)
+	{
+		return -2;
+	}
+	if (SSL_CTX_use_certificate_file(tls_ssl_context, "/home/goon/pleskcert.pem",  SSL_FILETYPE_PEM) != 1)
+	{
+		return -3;
+	}
+	if (SSL_CTX_use_PrivateKey_file(tls_ssl_context, "/home/goon/pleskpkey.pem",  SSL_FILETYPE_PEM) != 1)
+	{
+		return -4;
+	}
+	SSL_CTX_set_verify(tls_ssl_context, SSL_VERIFY_NONE, NULL);
+	return 0;
+}
+
 void *WebSocketServer::ListenConnections(void *arg)
 {
 	WebSocketServer *me = (WebSocketServer*)arg;
 	int ret;
-	
+
+	ret = me->InitSSL();
+	if (ret < 0)
+	{
+		Log("SSL initialization failed (%i)\n", ret);
+		return NULL;
+	}
+
 	ret = me->ListenSocket();
 	if (ret < 0)
 	{
@@ -69,7 +105,8 @@ void *WebSocketServer::ListenConnections(void *arg)
 	while (!(me->stop))
 	{
 		Client new_client;
-		ret = new_client.Accept(me->server_socket);
+		ret = new_client.Accept(me->server_socket, me->tls_ssl_context);
+		ERR_print_errors_fp (stdout);
 		Log("Someone has connected\n");
 		if (ret == 0)
 		{
@@ -83,7 +120,7 @@ void *WebSocketServer::ListenConnections(void *arg)
 			me->ReleaseClientsList();
 		}
 		else
-			Log("Disconnected without handshaking. Errno tells: %s\n", strerror(new_client.get_last_error()));
+			Log("Disconnected without handshaking(%i). Errno tells: %s\n", ret, strerror(new_client.get_last_error()));
 	}
 	
 	me->LockClientsList();
@@ -245,28 +282,6 @@ void *WebSocketServer::ListenMessages(void *arg)
 						//ret < 0 in this branch
 						copy.Disconnect();
 					}
-					/*if (ret >= 0)
-					{
-						me->OnMessage(copy, data_buf, ret);
-						me->clients.insert(copy);
-						//it++;
-					}
-					else if (ret == -7)
-					{
-						//Handshaking
-						me->clients.insert(copy);
-					}
-					else if (ret == -8)
-					{
-						//eagain or incomplete frame
-						me->clients.insert(copy);
-					}
-					else if (ret < 0)
-					{
-						Log("Receive returned %i\n", ret);
-						copy.Disconnect();
-						//me->clients.erase(it++);
-					}*/
 				}while (ret == READ_SUCCEED_DATA_AVAILABLE || ret == HANDSHAKE_SUCCEED);
 				if (ret >= 0)
 				{
