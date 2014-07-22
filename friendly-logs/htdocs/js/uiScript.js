@@ -8,13 +8,18 @@ Reaction.clickFileCheck = function (clickedElem)
 	var savedVars = $('someInformation').value;
 	var separated = savedVars.split(' ');
 	if (!clickedElem.checked) {
-		//SocketWorker.stopReadSend(clickedElem.value) // Sending file names to server like that.
+		//SocketWorker.stopReadSend(separated[0], fileName)) // Sending file names to server like that.
 		$('setupAll').checked = false;
 	}
 	else {
 		//alert(separated[0] + ' on adress ' + separated[1] + ' and ' + clickedElem.value);
-		SocketWorker("ws://" + separated[1] + ":10000/", separated[0], fileName); // Try to connect
-		//SocketWorker.startReadSend(destPoints[0], destPoints[1]) // Sending file names to server like that.
+		if (!workSocket) {
+			alert('Socket initialyze now');
+			SocketWorker("ws://" + separated[1] + ":10030/"); // Try init socket. // change later
+		}
+		else {
+			SocketWorker.startReadSend(separated[0], fileName) // Sending file names to server like that.
+		}
 	}
 }
 
@@ -30,12 +35,11 @@ Reaction.clickAllFiles = function(clickedElem)
 	var elemValue = clickedElem.value;
 	for (var i = 1; i <= elemValue; i++) {
 		var logName = $('log' + i);
-		logName.checked = true;
-		//SocketWorker.startReadSend(logName.value) // Sending file names to server like that.
+		if(!logName.checked) {
+			logName.checked = true;
+			SocketWorker.startReadSend(logName.value) // Sending file names to server like that.
+		}
 	}/**/
-
-	//alert("See me!");
-	EntryWorker.addEntry('Entry!');
 }
 
 // Class entry worker add entryes to list and add some css styles to entryes
@@ -60,17 +64,19 @@ EntryWorker.addEntry = function(entry)
 }
 
 // Class sender work with web socket connections
-function SocketWorker(addr, host, filename) 
+var workSocket;
+function SocketWorker(addr) // Initialyze socket
 { 
 	if ("WebSocket" in window) {
-		//alert("WebSocket is supported by your Browser!");
+		alert("WebSocket is supported by your Browser!");
      	// Start connection
-	    var workSocket = new WebSocket(addr);
+	    workSocket = new WebSocket(addr);
 	    workSocket.onopen = function()
 	    {
 	        // Web Socket is connected, send data using send()
+	        alert("Socket is opened");
 	        //alert("Start send this: " + host + filename);
-	        workSocket.send('/var/www/vhosts/' + host + '/logs/' + filename);
+	        //workSocket.send('/var/www/vhosts/' + host + '/logs/' + filename);
 	        //alert("Message is sent...");
 	    };
 	    workSocket.onmessage = function (evt) 

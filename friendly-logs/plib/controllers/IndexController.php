@@ -10,7 +10,7 @@ class IndexController extends pm_Controller_Action
         $this->view->pageTitle = 'Log viewer';
     	// Include js files.
         $extURL = pm_Context::getBaseUrl();
-    	$fileURL = $extURL . 'js/uiScript.js?v3';
+    	$fileURL = $extURL . 'js/uiScript.js?v4';
     	$this->view->headScript()->appendFile($fileURL);
         // Add css files
         $fileURL = $extURL . 'css/putLogsStyle.css';
@@ -43,6 +43,7 @@ class IndexController extends pm_Controller_Action
         $form->build();
 
         $this->view->form = $form;
+
     }
 }
 
@@ -98,8 +99,10 @@ class ExtensionForm extends pm_Form_Simple
 
                                 // Add element with nedded for server information.
         $serverIP = $_SERVER['SERVER_ADDR'];
+        //$serverIP = gethostbyname(gethostname()); // second version to get ip adress.
         $hidden = $this->createElement('hidden', 'someInformation');
         $hidden->setValue($domainName . ' ' . $serverIP);
+        //$hidden->setAttrib('onload', 'SocketWorker(ws://' . $serverIP . ':20030)');
         $this->addElement($hidden);
 
         // Decorator for our display group with checkboxes
