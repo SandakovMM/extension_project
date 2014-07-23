@@ -1,6 +1,6 @@
 #include <pthread.h>
 
-#include <set>
+#include <map>
 
 #include <websocket.h>
 
@@ -13,13 +13,13 @@
 
 bool(*a)(Client, Client) = compare_clients;*/
 
-struct ClientComparator
+/*struct ClientComparator
 {
 	bool operator()(const Client &c1, const Client &c2) const
 	{
 		return c1.get_socket() < c2.get_socket();
 	}
-};
+};*/
 
 class WebSocketServer
 {
@@ -27,16 +27,18 @@ class WebSocketServer
 	char address[16];
 	int max_queue_len;
 	int server_socket;
+	int id_counter;
 	int last_error;
-	bool stop;
 	pthread_mutex_t clients_mutex;
 	pthread_cond_t clients_not_empty_cond;
 	pthread_t connection_listener;
 	pthread_t message_listener;
 	SSL_CTX *tls_ssl_context;
-	std::set<Client,ClientComparator> clients;
+protected:
+	bool stop;
+	std::map<int,Client> clients;
 	
-private:
+protected:
 	static int SendFrame(const Client &client, const uint8_t *buffer, size_t buffer_size);
 	int DoHandshake(Client &client);
 	static void *ListenConnections(void *arg);
@@ -48,11 +50,14 @@ private:
 	void TellThatListIsNotEmpty();
 	int ListenSocket();
 	static int RecieveData(const Client &client, char* buf, int len);
+	int GenerateID();
 public:
 	WebSocketServer(int port_, const char *address_, int max_queue_len_);
 	int Send(const Client &recepient, char *message, int len);
 	static void DisconnectClient(Client who);
-	int Run();
-	void Stop();
+	virtual int Run();
+	virtual void Stop();
 	virtual void OnMessage(Client &sender, char *message, int len)=0;
+	virtual void OnDisconnect(Client &disconnected)=0;
+	Client *get_client(int id);
 };

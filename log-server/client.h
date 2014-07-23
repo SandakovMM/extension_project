@@ -17,6 +17,7 @@
 
 class Client
 {
+	int id;
 	int socket;
 	sockaddr address;
 	unsigned int address_len;
@@ -38,7 +39,9 @@ public:
 	int SendFrame(const unsigned char *buffer, size_t buffer_size);
 	int Send(char *message, int len);
 	void Disconnect();
-	int get_socket()const;
+	void set_id(int new_id);
+	int get_id();
+	int get_socket();
 	sockaddr get_address();
 	int get_address_len();
 	int get_last_error();

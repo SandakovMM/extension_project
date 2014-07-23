@@ -18,6 +18,7 @@
 
 Client::Client()
 {
+	id = -1;
 	socket = -1;
 	frame_buf_pos = 0;
 	handshaked = false;
@@ -88,6 +89,11 @@ int Client::Accept(int listener, SSL_CTX *tls_ssl_context)
 	return 0;
 }
 
+void Client::set_id(int new_id)
+{
+	id = new_id;
+}
+
 int Client::SetNonBlocking()
 {
 	if (fcntl(socket, F_SETFL, O_NONBLOCK) < 0)
@@ -121,7 +127,8 @@ int Client::Receive(char *buf, int *len)
 		Log("Handshaking\n");
 		//if we didn't do a hanshake yet, start/continue
 		//doing it. If failed, return error, if succeed,
-		//return 0 (like we got an empty message)
+		//return flag indicatin that more data is pending
+		//(in case it really is)
 		ret = Handshake();
 		if (ret < 0)
 		{
@@ -392,7 +399,12 @@ void Client::Disconnect()
 	Log("Disconnecting\n");
 }
 
-int Client::get_socket()const
+int Client::get_id()
+{
+	return id;
+}
+
+int Client::get_socket()
 {
 	return socket;
 }

@@ -3,6 +3,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <errno.h>
+#include <limits.h>
 
 #include <openssl/ssl.h>
 #include <openssl/err.h>
@@ -28,6 +29,7 @@ WebSocketServer::WebSocketServer(int port_, const char *address_, int max_queue_
 	clients_mutex = PTHREAD_MUTEX_INITIALIZER;
 	connection_listener = -1;
 	message_listener = -1;
+	id_counter = 0;
 }
 
 int WebSocketServer::DoHandshake(Client &client)
@@ -83,10 +85,25 @@ int WebSocketServer::InitSSL()
 	return 0;
 }
 
+int WebSocketServer::GenerateID()
+{
+	//TODO: replace incrementing with rng
+	// OR replace it all with just incrementing same variable to get new id
+	for (int i = 0; i < INT_MAX; i ++)
+	{
+		if (clients.count(id_counter + i) == 0)
+		{
+			id_counter = id_counter + i;
+			return id_counter;
+		}
+	}
+	return -1;
+}
+
 void *WebSocketServer::ListenConnections(void *arg)
 {
 	WebSocketServer *me = (WebSocketServer*)arg;
-	int ret;
+	int ret, id;
 
 	ret = me->InitSSL();
 	if (ret < 0)
@@ -106,16 +123,27 @@ void *WebSocketServer::ListenConnections(void *arg)
 	{
 		Client new_client;
 		ret = new_client.Accept(me->server_socket, me->tls_ssl_context);
-		ERR_print_errors_fp (stdout);
+		//ERR_print_errors_fp (stdout);
 		Log("Someone has connected\n");
 		if (ret == 0)
 		{
 			new_client.SetNonBlocking();
 			me->LockClientsList();
-			me->clients.insert(new_client);
-			if (me->clients.size() == 1)
+			id  = me->GenerateID();
+			if (id >= 0)
 			{
-				me->TellThatListIsNotEmpty();
+				new_client.set_id(id);
+				me->clients[id] = new_client;
+				Log("Added client with id %i\n", id);
+				if (me->clients.size() == 1)
+				{
+					me->TellThatListIsNotEmpty();
+				}
+			}
+			else
+			{
+				Log("Generated invalid id %i, disconnecting\n", id);
+				new_client.CloseSocket();
 			}
 			me->ReleaseClientsList();
 		}
@@ -124,13 +152,9 @@ void *WebSocketServer::ListenConnections(void *arg)
 	}
 	
 	me->LockClientsList();
-	for (std::set<Client,ClientComparator>::iterator it = me->clients.begin(); it != me->clients.end(); it++)
+	for (auto it = me->clients.begin(); it != me->clients.end(); it++)
 	{
-		//This is normally a bad idea bacause a copy of the element in set is
-		//being modified, but here we don't care since we clear the set
-		//right after that and Disconnect will do just what we want anyway 
-		Client cur = *it;
-		cur.Disconnect();
+		it->second.Disconnect();
 	}
 	me->clients.clear();
 	me->ReleaseClientsList();	
@@ -175,59 +199,6 @@ void WebSocketServer::TellThatListIsNotEmpty()
 	pthread_cond_signal(&clients_not_empty_cond);
 }
 
-/*void WebSocketServer::DisconnectClient(Client who)
-{
-	unsigned char frame_buf[BUF_LEN];
-	unsigned int frame_size;
-	
-	//TODO: if connection reset by other side then just close socket
-	wsMakeFrame(NULL, 0, frame_buf, &frame_size, WS_CLOSING_FRAME);
-	SendFrame(who, frame_buf, frame_size);
-	who.CloseSocket();
-}
-
-int WebSocketServer::SendFrame(const Client &client, const uint8_t *buffer, size_t buffer_size)
-{
-    int client_socket = client.get_socket();
-    ssize_t written = send(client_socket, buffer, buffer_size, 0);
-    if (written == -1)
-    {
-        Log("send failed\n");
-        return -1;
-    }
-    if (written != buffer_size) 
-    {
-        Log("written not all bytes(%i of %i)\n", written, buffer_size);
-
-		int written_total = written;
-		while (written_total < buffer_size && written >= 0)
-		{
-			written = send(client_socket, buffer + written_total, buffer_size - written_total, 0);
-			written_total += written;
-			Log("written %i bytes more (%i of %i total)\n", written, written_total, buffer_size);
-		}
-		if (written < 0)
-		{
-				return -1;
-		}
-    }
-    
-    return 0;
-}
-
-int WebSocketServer::RecieveData(const Client &client, char *buf, int len)
-{
-}
-
-int WebSocketServer::Send(const Client &recepient, char *message, int len)
-{
-	unsigned char frame_buf[BUF_LEN];
-	size_t frame_len = BUF_LEN;
-
-	wsMakeFrame((unsigned char*)message, len, frame_buf, &frame_len, WS_TEXT_FRAME);
-	return SendFrame(recepient, frame_buf, frame_len);
-}*/
-
 void *WebSocketServer::ListenMessages(void *arg)
 {
 	WebSocketServer *me = (WebSocketServer*)arg;
@@ -243,49 +214,47 @@ void *WebSocketServer::ListenMessages(void *arg)
 		me->WaitUntilListIsNotEmpty();
 		//Log("Filling set\n");
 		FD_ZERO(&fds);
+		nfds = -1;
 		for (auto it = me->clients.begin(); it != me->clients.end(); it++)
 		{
-			FD_SET(it->get_socket(), &fds);
+			FD_SET(it->second.get_socket(), &fds);
+			if (it->second.get_socket() > nfds)
+			{
+				nfds = it->second.get_socket();
+			}
 		}
-		nfds = me->clients.rbegin()->get_socket() + 1;
+		nfds ++;
 		me->ReleaseClientsList();
 		
-		select(nfds, &fds, NULL, NULL, NULL);
+		ret = select(nfds, &fds, NULL, NULL, NULL);
+		//Log("Select returned %i\n", ret);
 		
 		me->LockClientsList();
 		for (auto it = me->clients.begin(); it != me->clients.end();)
 		{
-			if (FD_ISSET(it->get_socket(), &fds))
+			if (FD_ISSET(it->second.get_socket(), &fds))
 			{
-				//Log("recv...\n");
-				//That looks strange, but that's how sets work,
-				//you can't modify element while it's in the set.
-				//It is way better to use map here since we
-				//don't really ever change the socket field of Client
-				//and huge send-recv buffers are being copied 
-				//every time this shit happens.
-				//TODO: fix.
-				Client copy = *it;
-				me->clients.erase(it++);
-				Log("Next client\n");
+				//Log("Next client\n");
 				do{
 					data_len = BUF_LEN;
-					ret = copy.Receive(data_buf, &data_len);
-					Log("Receive returned %i\n", ret);
+					ret = it->second.Receive(data_buf, &data_len);
+					//Log("Receive returned %i\n", ret);
 					if (ret == READ_SUCCEED || ret == READ_SUCCEED_DATA_AVAILABLE)
 					{
-						me->OnMessage(copy, data_buf, data_len);
-						//me->clients.insert(copy);
+						me->OnMessage(it->second, data_buf, data_len);
+						//it++;
 					}
 					else if (ret < 0)
 					{
 						//ret < 0 in this branch
-						copy.Disconnect();
+						it->second.Disconnect();
+						me->OnDisconnect(it->second);
+						me->clients.erase(it++);
 					}
 				}while (ret == READ_SUCCEED_DATA_AVAILABLE || ret == HANDSHAKE_SUCCEED);
 				if (ret >= 0)
 				{
-					me->clients.insert(copy);
+					it ++;
 				}
 			}
 		}
@@ -305,17 +274,17 @@ int WebSocketServer::Run()
 		connection_listener = -1;
 		return -1;
 	}
-	/*if (pthread_create(&message_listener, NULL, WebSocketServer::ListenMessages, this) < 0)
+	if (pthread_create(&message_listener, NULL, WebSocketServer::ListenMessages, this) < 0)
 	{
 		last_error = errno;
 		stop = true;
 		pthread_join(connection_listener, NULL);
 		connection_listener = -1;
 		message_listener = -1;
-		return -1;
-	}*/
+		return -2;
+	}
 	printf("starting to listen messages\n");
-	WebSocketServer::ListenMessages(this);
+	//WebSocketServer::ListenMessages(this);
 	return 0;
 }
 
@@ -326,5 +295,18 @@ void WebSocketServer::Stop()
 	{
 		pthread_join(connection_listener, NULL);
 		pthread_join(message_listener, NULL);
+	}
+}
+
+Client *WebSocketServer::get_client(int id)
+{
+	auto it = clients.find(id);
+	if (it != clients.end())
+	{
+		return &(it->second);
+	}
+	else
+	{
+		return NULL;
 	}
 }
