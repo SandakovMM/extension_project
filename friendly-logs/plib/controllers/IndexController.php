@@ -18,7 +18,7 @@ class IndexController extends pm_Controller_Action
         // Check working of log server and start it if needed.
         exec("pgrep log-server", $output, $return);
         if ($return != 0) {
-            exec('/home/smm/projects/plesk/extension_project/log-server/log-server 127.0.1.1 10010 > /dev/null 2 > /dev/null &'); // Start server here.
+            exec('/home/smm/projects/plesk/extension_project/log-server/log-server 127.0.1.1 10050 > /dev/null 2 > /dev/null &'); // Start server here.
         } // Stream of programm go to dev null now. Maybe later we save it into some file.
      }
 

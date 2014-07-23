@@ -40,7 +40,7 @@ Reaction.clickAllFiles = function(clickedElem)
 		var logName = $('log' + i);
 		if(!logName.checked) {
 			logName.checked = true;
-			SocketWorker.startReadSend(logName.value) // Sending file names to server like that.
+			SocketWorker.startReadSend(logName.value); // Sending file names to server like that.
 		}
 	}/**/
 }
@@ -63,7 +63,7 @@ EntryWorker.addEntry = function(entry)
 		newOption.style.background = 'linear-gradient(to right, green, #ffffff)';
 	
 	//newOption.className = 'good';
-	list.appendChild(newOption);
+	list.add(newOption, list[0]);
 }
 
 // Class sender work with web socket connections
@@ -75,7 +75,7 @@ function SocketWorker() // Initialyze socket
 		var savedVars = $('someInformation').value;
 		var ipAdress = savedVars.split(' ')[1];
      	// Start connection
-	    workSocket = new WebSocket("ws://" + ipAdress + ":10010/");
+	    workSocket = new WebSocket("ws://" + ipAdress + ":10050/");
 	    workSocket.onopen = function()
 	    {
 	        // Web Socket is connected, send data using send()
