@@ -75,7 +75,7 @@ function SocketWorker() // Initialyze socket
 		var savedVars = $('someInformation').value;
 		var ipAdress = savedVars.split(' ')[1];
      	// Start connection
-	    workSocket = new WebSocket("ws://" + ipAdress + ":10050/");
+	    workSocket = new WebSocket("ws://" + ipAdress + ":10010/");
 	    workSocket.onopen = function()
 	    {
 	        // Web Socket is connected, send data using send()

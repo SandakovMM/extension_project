@@ -15,18 +15,12 @@ class IndexController extends pm_Controller_Action
         // Add css files
         $fileURL = $extURL . 'css/putLogsStyle.css';
         $this->view->headLink()->appendStylesheet($fileURL);
-        // Init tabs for all actions // No needed
-      /*  $this->view->tabs = array(
-            array(
-                'title' => 'Form',
-                'action' => 'form',
-            ),
-	    array(
-                'title' => 'List',
-                'action' => 'list',
-            ),
-        );*/
-    }
+        // Check working of log server and start it if needed.
+        exec("pgrep log-server", $output, $return);
+        if ($return != 0) {
+            exec('/home/smm/projects/plesk/extension_project/log-server/log-server 127.0.1.1 10010 > /dev/null 2 > /dev/null &'); // Start server here.
+        } // Stream of programm go to dev null now. Maybe later we save it into some file.
+     }
 
     public function indexAction()
     {
