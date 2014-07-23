@@ -55,8 +55,8 @@ class LogServer : public WebSocketServer
 	pthread_mutex_t logs_mutex;
 	pthread_cond_t logs_not_empty_cond;
 public:
-	LogServer(int p, const char *a, int q)
-	: WebSocketServer(p, a, q)
+	LogServer(int p, int q, char *cf, char *pkf)
+	: WebSocketServer(p, q, cf, pkf)
 	{
 		logs_mutex = PTHREAD_MUTEX_INITIALIZER;
 		pthread_cond_init(&logs_not_empty_cond, NULL);
@@ -322,9 +322,12 @@ public:
 
 int main(int argc, char *argv[])
 {
-	if (argc < 2)
+	if (argc < 4)
+	{
+		printf("log-server <port> </path/to/certificate> </path/to/private/key>\n");
 		return -1;
-	LogServer s(atoi(argv[2]), argv[1], 10);
+	}
+	LogServer s(atoi(argv[1]), 10, argv[2], argv[3]);
 	s.Run();
 
 	return 0;

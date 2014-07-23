@@ -20,16 +20,18 @@
 	#define Log(format, ...)
 #endif
 
-WebSocketServer::WebSocketServer(int port_, const char *address_, int max_queue_len_)
+WebSocketServer::WebSocketServer(int port_, int max_queue_len_, char *cert, char *pkey)
 {
 	port = port_;
 	max_queue_len = max_queue_len_;
-	strcpy(address, address_);
+	//strcpy(address, address_);
 	pthread_cond_init(&clients_not_empty_cond, NULL);
 	clients_mutex = PTHREAD_MUTEX_INITIALIZER;
 	connection_listener = -1;
 	message_listener = -1;
 	id_counter = 0;
+	certificate_file.assign(cert);
+	private_key_file.assign(pkey);
 }
 
 int WebSocketServer::DoHandshake(Client &client)
@@ -42,7 +44,8 @@ int WebSocketServer::ListenSocket()
 
 	saddr.sin_family = AF_INET;
 	saddr.sin_port = htons(port);
-	inet_aton(address, &(saddr.sin_addr));
+	//inet_aton(address, &(saddr.sin_addr));
+	saddr.sin_addr.s_addr = INADDR_ANY;
 
 	server_socket = socket(AF_INET, SOCK_STREAM, 0);
 	
@@ -73,11 +76,11 @@ int WebSocketServer::InitSSL()
 	{
 		return -2;
 	}
-	if (SSL_CTX_use_certificate_file(tls_ssl_context, "/home/goon/pleskcert.pem",  SSL_FILETYPE_PEM) != 1)
+	if (SSL_CTX_use_certificate_file(tls_ssl_context, certificate_file.c_str(), SSL_FILETYPE_PEM) != 1)
 	{
 		return -3;
 	}
-	if (SSL_CTX_use_PrivateKey_file(tls_ssl_context, "/home/goon/pleskpkey.pem",  SSL_FILETYPE_PEM) != 1)
+	if (SSL_CTX_use_PrivateKey_file(tls_ssl_context, private_key_file.c_str(),  SSL_FILETYPE_PEM) != 1)
 	{
 		return -4;
 	}

@@ -1,6 +1,7 @@
 #include <pthread.h>
 
 #include <map>
+#include <string>
 
 #include <websocket.h>
 
@@ -33,6 +34,8 @@ class WebSocketServer
 	pthread_cond_t clients_not_empty_cond;
 	pthread_t connection_listener;
 	pthread_t message_listener;
+	std::string certificate_file;
+	std::string private_key_file;
 	SSL_CTX *tls_ssl_context;
 protected:
 	bool stop;
@@ -52,7 +55,7 @@ protected:
 	static int RecieveData(const Client &client, char* buf, int len);
 	int GenerateID();
 public:
-	WebSocketServer(int port_, const char *address_, int max_queue_len_);
+	WebSocketServer(int port_, int max_queue_len_, char *cert, char *pkey);
 	int Send(const Client &recepient, char *message, int len);
 	static void DisconnectClient(Client who);
 	virtual int Run();
