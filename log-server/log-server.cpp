@@ -6,6 +6,7 @@
 #include <sys/wait.h>
 
 #include <fcntl.h>
+#include <unistd.h>
 
 #ifdef DEBUGLOGGING
 	#define Log(format, ...) printf(format, ## __VA_ARGS__)
@@ -143,6 +144,7 @@ public:
 
 	void OnMessage(Client &sender, char *message, int len)
 	{
+		Log("OnMessage fired\n");
 		int ret;
 		if (CheckLogName(message) == 0)
 		{
@@ -172,6 +174,7 @@ public:
 						log.name.assign(file_name_offset);
 						log.client_id = sender.get_id();
 
+						Log("Locking logs list\n");
 						LockLogsList();
 						logs.push_back(log);
 						if (logs.size() == 1)
@@ -179,6 +182,7 @@ public:
 							TellThatLogsListIsNotEmpty();
 						}
 						ReleaseLogsList();
+						Log("Released logs list\n");
 					}
 				}
 				else if (strncmp(del_action, message, strlen(del_action)) == 0)

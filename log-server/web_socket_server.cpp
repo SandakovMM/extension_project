@@ -137,7 +137,7 @@ void *WebSocketServer::ListenConnections(void *arg)
 			{
 				new_client.set_id(id);
 				me->clients[id] = new_client;
-				Log("Added client with id %i\n", id);
+				Log("Added client with id %i (socket fd %i)\n", id, new_client.get_socket());
 				if (me->clients.size() == 1)
 				{
 					me->TellThatListIsNotEmpty();
@@ -213,13 +213,14 @@ void *WebSocketServer::ListenMessages(void *arg)
 	
 	while (!(me->stop))
 	{
-		//Log("%i clients\n", me->clients.size());
+		Log("%i clients\n", me->clients.size());
 		me->WaitUntilListIsNotEmpty();
-		//Log("Filling set\n");
+		Log("Filling set\n");
 		FD_ZERO(&fds);
 		nfds = -1;
 		for (auto it = me->clients.begin(); it != me->clients.end(); it++)
 		{
+			Log("Adding to select list fd %i\n", it->second.get_socket());
 			FD_SET(it->second.get_socket(), &fds);
 			if (it->second.get_socket() > nfds)
 			{
@@ -229,8 +230,9 @@ void *WebSocketServer::ListenMessages(void *arg)
 		nfds ++;
 		me->ReleaseClientsList();
 		
+		Log("Selecting\n");
 		ret = select(nfds, &fds, NULL, NULL, NULL);
-		//Log("Select returned %i\n", ret);
+		Log("Select returned %i\n", ret);
 		
 		me->LockClientsList();
 		for (auto it = me->clients.begin(); it != me->clients.end();)
@@ -239,28 +241,37 @@ void *WebSocketServer::ListenMessages(void *arg)
 			{
 				//Log("Next client\n");
 				do{
+					Log("Trying to recieve\n");
 					data_len = BUF_LEN;
 					ret = it->second.Receive(data_buf, &data_len);
-					//Log("Receive returned %i\n", ret);
+					Log("Receive returned %i\n", ret);
 					if (ret == READ_SUCCEED || ret == READ_SUCCEED_DATA_AVAILABLE)
 					{
 						me->OnMessage(it->second, data_buf, data_len);
 						//it++;
+						Log("onmessage returned\n");
 					}
 					else if (ret < 0)
 					{
 						//ret < 0 in this branch
 						it->second.Disconnect();
 						me->OnDisconnect(it->second);
-						me->clients.erase(it++);
 					}
+					Log("Here\n");
 				}while (ret == READ_SUCCEED_DATA_AVAILABLE || ret == HANDSHAKE_SUCCEED);
-				if (ret >= 0)
-				{
-					it ++;
-				}
+			}
+			if (ret >= 0)
+			{
+				Log("incrementing\n");
+				it ++;
+			}
+			else
+			{
+				Log("incrementing and deleting\n");
+				me->clients.erase(it++);
 			}
 		}
+		Log("releasing list\n");
 		me->ReleaseClientsList();
 	}
 	
