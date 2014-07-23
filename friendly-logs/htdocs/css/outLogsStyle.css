@@ -1,14 +1,11 @@
-div {
-	background-color: #FF0000 
-}
 .good {
-	color:green;
+	background:linear-gradient(to right, green, #ffffff);
 }
 
 .warning {
-	color:yellow;
+	background:linear-gradient(to right, yellow, #ffffff);
 }
 
 .error {
-	color:red;
+	background:linear-gradient(to right, red, #ffffff);
 }

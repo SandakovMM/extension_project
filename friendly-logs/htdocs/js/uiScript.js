@@ -56,11 +56,14 @@ EntryWorker.addEntry = function(entry)
 	// choosing style of entry
 	var rand = Math.random() * 10 + 1;
 	if (rand < 3)
-		newOption.style.background = 'linear-gradient(to right, red, #ffffff';
+		newOption.className = 'good';
+	//	newOption.style.background = 'linear-gradient(to right, red, #ffffff';
 	else if (rand < 6)
-		newOption.style.background = 'linear-gradient(to right, yellow, #ffffff)';
+		newOption.className = 'warning';
+	//	newOption.style.background = 'linear-gradient(to right, yellow, #ffffff)';
 	else 
-		newOption.style.background = 'linear-gradient(to right, green, #ffffff)';
+		newOption.className = 'error';
+	//	newOption.style.background = 'linear-gradient(to right, green, #ffffff)';
 	
 	//newOption.className = 'good';
 	list.add(newOption, list[0]);

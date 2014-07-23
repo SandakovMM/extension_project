@@ -13,7 +13,7 @@ class IndexController extends pm_Controller_Action
     	$fileURL = $extURL . 'js/uiScript.js?v5';
     	$this->view->headScript()->appendFile($fileURL);
         // Add css files
-        $fileURL = $extURL . 'css/putLogsStyle.css';
+        $fileURL = $extURL . 'css/outLogsStyle.css';
         $this->view->headLink()->appendStylesheet($fileURL);
         // Check working of log server and start it if needed.
         exec("pgrep log-server", $output, $return);
