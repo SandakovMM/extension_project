@@ -10,23 +10,17 @@ class IndexController extends pm_Controller_Action
         $this->view->pageTitle = 'Log viewer';
     	// Include js files.
         $extURL = pm_Context::getBaseUrl();
-    	$fileURL = $extURL . 'js/uiScript.js?v3';
+    	$fileURL = $extURL . 'js/uiScript.js?v5';
     	$this->view->headScript()->appendFile($fileURL);
         // Add css files
-        $fileURL = $extURL . 'css/putLogsStyle.css';
+        $fileURL = $extURL . 'css/outLogsStyle.css';
         $this->view->headLink()->appendStylesheet($fileURL);
-        // Init tabs for all actions // No needed
-      /*  $this->view->tabs = array(
-            array(
-                'title' => 'Form',
-                'action' => 'form',
-            ),
-	    array(
-                'title' => 'List',
-                'action' => 'list',
-            ),
-        );*/
-    }
+        // Check working of log server and start it if needed.
+        exec("pgrep log-server", $output, $return);
+        if ($return != 0) {
+            exec('/home/smm/projects/plesk/extension_project/log-server/log-server 127.0.1.1 10050 > /dev/null 2 > /dev/null &'); // Start server here.
+        } // Stream of programm go to dev null now. Maybe later we save it into some file.
+     }
 
     public function indexAction()
     {
@@ -43,6 +37,7 @@ class IndexController extends pm_Controller_Action
         $form->build();
 
         $this->view->form = $form;
+
     }
 }
 
@@ -98,8 +93,10 @@ class ExtensionForm extends pm_Form_Simple
 
                                 // Add element with nedded for server information.
         $serverIP = $_SERVER['SERVER_ADDR'];
+        //$serverIP = gethostbyname(gethostname()); // second version to get ip adress.
         $hidden = $this->createElement('hidden', 'someInformation');
         $hidden->setValue($domainName . ' ' . $serverIP);
+        //$hidden->setAttrib('onload', 'SocketWorker(ws://' . $serverIP . ':20030)');
         $this->addElement($hidden);
 
         // Decorator for our display group with checkboxes

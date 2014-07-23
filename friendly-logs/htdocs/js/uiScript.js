@@ -1,3 +1,6 @@
+// Call init socket function ol load of document
+document.observe('dom:loaded', function(){ SocketWorker(); });
+
 // Class reaction work with on click user actions.
 function Reaction() {  }
 	//function clickFileCheck(clickedElem)
@@ -6,15 +9,20 @@ Reaction.clickFileCheck = function (clickedElem)
 	// Now geting domain and file like this
 	var fileName = clickedElem.value;
 	var savedVars = $('someInformation').value;
-	var separated = savedVars.split(' ');
+	var domainName = savedVars.split(' ')[0];
 	if (!clickedElem.checked) {
-		//SocketWorker.stopReadSend(clickedElem.value) // Sending file names to server like that.
+		//SocketWorker.stopReadSend(separated[0], fileName)) // Sending file names to server like that.
 		$('setupAll').checked = false;
 	}
 	else {
 		//alert(separated[0] + ' on adress ' + separated[1] + ' and ' + clickedElem.value);
-		SocketWorker("ws://" + separated[1] + ":10000/", separated[0], fileName); // Try to connect
-		//SocketWorker.startReadSend(destPoints[0], destPoints[1]) // Sending file names to server like that.
+		if (!workSocket) {
+			alert('Socket is not initialyze yet');
+			//SocketWorker("ws://" + separated[1] + ":10030/"); // Try init socket. // change later
+		}
+		else {
+			SocketWorker.startReadSend(domainName, fileName) // Sending file names to server like that.
+		}
 	}
 }
 
@@ -30,12 +38,11 @@ Reaction.clickAllFiles = function(clickedElem)
 	var elemValue = clickedElem.value;
 	for (var i = 1; i <= elemValue; i++) {
 		var logName = $('log' + i);
-		logName.checked = true;
-		//SocketWorker.startReadSend(logName.value) // Sending file names to server like that.
+		if(!logName.checked) {
+			logName.checked = true;
+			SocketWorker.startReadSend(logName.value); // Sending file names to server like that.
+		}
 	}/**/
-
-	//alert("See me!");
-	EntryWorker.addEntry('Entry!');
 }
 
 // Class entry worker add entryes to list and add some css styles to entryes
@@ -49,28 +56,35 @@ EntryWorker.addEntry = function(entry)
 	// choosing style of entry
 	var rand = Math.random() * 10 + 1;
 	if (rand < 3)
-		newOption.style.background = 'linear-gradient(to right, red, #ffffff';
+		newOption.className = 'good';
+	//	newOption.style.background = 'linear-gradient(to right, red, #ffffff';
 	else if (rand < 6)
-		newOption.style.background = 'linear-gradient(to right, yellow, #ffffff)';
+		newOption.className = 'warning';
+	//	newOption.style.background = 'linear-gradient(to right, yellow, #ffffff)';
 	else 
-		newOption.style.background = 'linear-gradient(to right, green, #ffffff)';
+		newOption.className = 'error';
+	//	newOption.style.background = 'linear-gradient(to right, green, #ffffff)';
 	
 	//newOption.className = 'good';
-	list.appendChild(newOption);
+	list.add(newOption, list[0]);
 }
 
 // Class sender work with web socket connections
-function SocketWorker(addr, host, filename) 
+var workSocket;
+function SocketWorker() // Initialyze socket
 { 
 	if ("WebSocket" in window) {
 		//alert("WebSocket is supported by your Browser!");
+		var savedVars = $('someInformation').value;
+		var ipAdress = savedVars.split(' ')[1];
      	// Start connection
-	    var workSocket = new WebSocket(addr);
+	    workSocket = new WebSocket("ws://" + ipAdress + ":10050/");
 	    workSocket.onopen = function()
 	    {
 	        // Web Socket is connected, send data using send()
+	        alert("Socket is opened");
 	        //alert("Start send this: " + host + filename);
-	        workSocket.send('/var/www/vhosts/' + host + '/logs/' + filename);
+	        //workSocket.send('/var/www/vhosts/' + host + '/logs/' + filename);
 	        //alert("Message is sent...");
 	    };
 	    workSocket.onmessage = function (evt) 
