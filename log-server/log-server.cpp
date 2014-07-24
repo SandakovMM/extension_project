@@ -120,7 +120,7 @@ public:
 			return 0;
 		}
 
-		char *args[] = {"tail", "-F", fileName, NULL};
+		char *args[] = {"tail", "-F", "-n", "0", fileName, NULL};
 		close(tailPipe[0]);
 		dup2(tailPipe[1], 1);
 		execvp("tail", args);
@@ -144,8 +144,25 @@ public:
 
 	int StartReadingLog(Client &client, char *log_name)
 	{
+		const int buf_len = 2048;
+		char buf[buf_len];
+		int ret;
+
+		FILE *f = fopen(log_name, "r");
+		if (!f)
+		{
+			return -2;
+		}
+
+		while (fgets(buf, buf_len, f))
+		{
+			client.Send(buf, strlen(buf));
+		}
+		fclose(f);
+		Log("Content of \"%s\" has been sent\n", log_name);
+
 		LogDescription log;
-		int ret = OpenLog(log_name, &(log.fd), &(log.tail_pid));
+		ret = OpenLog(log_name, &(log.fd), &(log.tail_pid));
 		if (ret < 0)
 		{
 			Log("OpenLog returned %i, rejecting\n", ret);
