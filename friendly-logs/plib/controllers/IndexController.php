@@ -74,7 +74,7 @@ class ExtensionForm extends pm_Form_Simple
                     // Add element to group
                 if (is_null($this->logNamesGroup)) {
                     $logNameArray[] = $checkbox->getName();
-                    $this->addDisplayGroup($logNameArray, 'group', array('legend'=>'Log file names'));
+                    $this->addDisplayGroup($logNameArray, 'group'/*, array('legend'=>'Log file names')*/);
                     $this->logNamesGroup = $this->getDisplayGroup('group');
                 }
                 $this->logNamesGroup->addElement($checkbox);/* Find the way how do it normal*/          

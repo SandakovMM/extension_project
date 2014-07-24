@@ -57,8 +57,8 @@ EntryWorker.addEntry = function(entry)
 	for (var i = 0; i < allEntryes.length - 1; i++) {
 		var newOption = document.createElement('option');
 		newOption.innerHTML = allEntryes[i];
+		var rand = EntryWorker.entryAnalyses(allEntryes[i]);
 		// choosing style of entry
-		var rand = Math.random() * 10 + 1;
 		if (rand < 3)
 			newOption.className = 'good';
 		//	newOption.style.background = 'linear-gradient(to right, red, #ffffff';
@@ -72,6 +72,19 @@ EntryWorker.addEntry = function(entry)
 		//newOption.className = 'good';
 		list.add(newOption, list[0]);
 	}
+}
+
+EntryWorker.entryAnalyses = function(entry)
+{
+	/*var someParts = entry.split('[');
+	alert(someParts[1] + ' and ' + someParts[2]);*/
+	if (/\[ssl:warn\]/.test(entry)) {
+		return 5
+	}
+	if (/\"GET/.test(entry)) {
+		return 2
+	}
+	return Math.random() * 10 + 1;
 }
 
 // Class sender work with web socket connections
