@@ -2,8 +2,6 @@
 
 class IndexController extends pm_Controller_Action
 {
-    private $checkGroup = null;
-    private $logNamesGroup = null;
     public function init()
     {
         parent::init();
@@ -43,7 +41,7 @@ class IndexController extends pm_Controller_Action
 
 class ExtensionForm extends pm_Form_Simple
 {
-    private $checkGroup = null;
+    private $logPlaceGroup = null;
     private $logNamesGroup = null;
 
     public function build()
@@ -110,7 +108,17 @@ class ExtensionForm extends pm_Form_Simple
     {
         $selectElem = new Zend_Form_Element_Select('logList', array(
                 'label'=>'Logs', 'size'=>'2', 
-                'style'=>'width:65%;height:80vh;float:right;overflow-y:auto;'));
+                'style'=>'height:70vh;overflow:hidden;'));
+
         $this->addElement($selectElem);
+
+        $logPlaceArray[] = $selectElem->getName();
+        $this->addDisplayGroup($logPlaceArray, 'logGroup', array());
+        $this->logPlaceGroup = $this->getDisplayGroup('logGroup');
+        $this->logPlaceGroup->setDecorators(array(
+            'FormElements', 'Fieldset',
+            array('HtmlTag', array('tag'=>'div', 'style'=>'width:70%;height:80vh;
+                                        float:right;overflow-x:auto;overflow-y:auto;'))
+        ));
     }
 }
