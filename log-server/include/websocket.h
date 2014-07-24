@@ -121,8 +121,8 @@ struct handshake {
      * @param outLength Length of out frame buffer. Return length of out frame
      * @param frameType [WS_TEXT_FRAME] frame type to build
      */
-    void wsMakeFrame(const uint8_t *data, size_t dataLength,
-                     uint8_t *outFrame, size_t *outLength, enum wsFrameType frameType);
+    int wsMakeFrame(const uint8_t *data, size_t dataLength,
+                     uint8_t *outFrame, size_t outLength, enum wsFrameType frameType);
 
     /**
      *

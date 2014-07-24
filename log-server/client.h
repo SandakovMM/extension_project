@@ -3,6 +3,7 @@
 #include <openssl/ssl.h>
 
 #define BUF_LEN 2048
+#define SEND_BUF_LEN 16000
 
 #define READ_SUCCEED 0
 #define READ_SUCCEED_DATA_AVAILABLE 1
@@ -23,7 +24,7 @@ class Client
 	unsigned int address_len;
 	int last_error;
 	unsigned char frame_buf[BUF_LEN + 1];
-	unsigned char send_buf[BUF_LEN + 1];
+	unsigned char send_buf[SEND_BUF_LEN + 1];
 	int frame_buf_pos;
 	bool handshaked;
 	SSL_CTX *tls_ssl_context;

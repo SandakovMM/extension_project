@@ -381,20 +381,28 @@ int Client::SendFrame(const unsigned char *buffer, size_t buffer_size)
 int Client::Send(char *message, int len)
 {
 	//unsigned char frame_buf[BUF_LEN];
-	size_t frame_len = BUF_LEN;
-
-	wsMakeFrame((unsigned char*)message, len, send_buf, &frame_len, WS_TEXT_FRAME);
-	return SendFrame(send_buf, frame_len);
+	int frame_len = wsMakeFrame((unsigned char*)message, len, send_buf, SEND_BUF_LEN, WS_TEXT_FRAME);
+	if (frame_len < 0)
+	{
+		return -10;
+	}
+	else
+	{
+		return SendFrame(send_buf, frame_len);
+	}
 }
 
 void Client::Disconnect()
 {
 	//unsigned char frame_buf[BUF_LEN];
-	unsigned int frame_size = BUF_LEN;
+	int frame_size;
 	
 	//TODO: if connection reset by other side then just close socket
-	wsMakeFrame(NULL, 0, send_buf, &frame_size, WS_CLOSING_FRAME);
-	SendFrame(send_buf, frame_size);
+	frame_size = wsMakeFrame(NULL, 0, send_buf, SEND_BUF_LEN, WS_CLOSING_FRAME);
+	if (frame_size > 0)
+	{
+		SendFrame(send_buf, frame_size);
+	}
 	CloseSocket();
 	Log("Disconnecting\n");
 }
