@@ -56,9 +56,11 @@ EntryWorker.addEntry = function(entry)
 	for (var i = 0; i < allEntryes.length - 1; i++) {
 		var newOption = document.createElement('option');
 		newOption.innerHTML = allEntryes[i];
-		newOption.value = /\[.*?\]/.exec(entry)[0];
+		/*newOption.value = /\[.*?\]/.exec(allEntryes[i])[0];
 		newOption.value = newOption.value.replace(/[\[\]]/g, "");
-		//alert(newOption.value);
+		var tryDate = Date.parse(newOption.value);
+		alert(tryDate);*/
+
 		newOption.className = EntryWorker.entryAnalyses(allEntryes[i]);
 		list.add(newOption, list[0]);
 	}
