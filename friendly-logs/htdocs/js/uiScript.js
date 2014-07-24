@@ -56,8 +56,8 @@ EntryWorker.addEntry = function(entry)
 	for (var i = 0; i < allEntryes.length - 1; i++) {
 		var newOption = document.createElement('option');
 		newOption.innerHTML = allEntryes[i];
-		/*newOption.value = /\[.*?\]/.exec(allEntryes[i])[0];
-		newOption.value = newOption.value.replace(/[\[\]]/g, "");
+		newOption.value = /\[.*?\]/.exec(allEntryes[i])[0];
+/*		EntryWorker.dateWorker(newOption.value);
 		var tryDate = Date.parse(newOption.value);
 		alert(tryDate);*/
 
@@ -66,7 +66,7 @@ EntryWorker.addEntry = function(entry)
 	}
 }
 
-EntryWorker.entryAnalyses = function(entry)
+EntryWorker.entryAnalyses = function(entry) // Add most found entryes.
 {
 	/*var someParts = entry.split('[');
 	alert(someParts[1] + ' and ' + someParts[2]);*/
@@ -79,7 +79,11 @@ EntryWorker.entryAnalyses = function(entry)
 	return 'error';
 }
 
-//EntryWorker.time
+EntryWorker.dateWorker = function(dateEntry) // make some shit!
+{
+	var result = dateEntry.value.replace(/[\[\]]/g, '');
+	var result = result.value.replace(/^(.*?)\s.*$/, '$1');
+}
 
 // Class sender work with web socket connections
 var workSocket;
