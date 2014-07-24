@@ -34,13 +34,14 @@ Reaction.clickAllFiles = function(clickedElem)
 	if (!clickedElem.checked) // if we uncheck box
 		return;
 
-	var domainName = $('someInformation');
+	var info = $('someInformation').value;
+	var domainName = info.split(' ')[0];
 	var elemValue = clickedElem.value;
 	for (var i = 1; i <= elemValue; i++) {
 		var logName = $('log' + i);
 		if(!logName.checked) {
 			logName.checked = true;
-			SocketWorker.startReadSend(logName.value); // Sending file names to server like that.
+			SocketWorker.startReadSend(domainName, logName.value); // Sending file names to server like that.
 		}
 	}/**/
 }
@@ -111,6 +112,7 @@ function SocketWorker() // Initialyze socket
 SocketWorker.startReadSend = function(host, filename) // function send server file name and start reading logs
 {
 	//workSocket.send('start'); //Send somthing meens that we need to start reading;
+	alert(host + ' and ' + filename);
 	workSocket.send('add /var/www/vhosts/system/' + host + '/logs/' + filename); // some like this
 }
 SocketWorker.stopReadSend = function(host, filename) // function send server file name and start reading logs
