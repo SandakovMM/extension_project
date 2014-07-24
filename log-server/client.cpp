@@ -152,8 +152,8 @@ int Client::Receive(char *buf, int *len)
 	//Log("Receiving\n");
 	//unsigned char frame_buf[BUF_LEN];
 	//size_t read_total_len = 0;
-	unsigned int frame_size;
-	unsigned int data_size;
+	size_t frame_size;
+	size_t data_size;
 	enum wsFrameType frame_type = WS_INCOMPLETE_FRAME;
 	unsigned char *data;
 
@@ -244,7 +244,7 @@ int Client::Receive(char *buf, int *len)
 
 int Client::Handshake()
 {
-	unsigned int frame_size;
+	size_t frame_size;
 	enum wsFrameType frame_type = WS_INCOMPLETE_FRAME;
 	struct handshake hs;
 	nullHandshake(&hs);
