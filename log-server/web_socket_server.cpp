@@ -214,9 +214,9 @@ void *WebSocketServer::ListenMessages(void *arg)
 	
 	while (!(me->stop))
 	{
-		//Log("%i clients\n", me->clients.size());
+		Log("%i clients\n", me->clients.size());
 		me->WaitUntilListIsNotEmpty();
-		//Log("Filling set\n");
+		Log("Filling set\n");
 		timeout.tv_sec = 2;
 		timeout.tv_usec = 0;
 
@@ -224,7 +224,7 @@ void *WebSocketServer::ListenMessages(void *arg)
 		nfds = -1;
 		for (auto it = me->clients.begin(); it != me->clients.end(); it++)
 		{
-			//Log("Adding to select list fd %i\n", it->second.get_socket());
+			Log("Adding to select list fd %i\n", it->second.get_socket());
 			FD_SET(it->second.get_socket(), &fds);
 			if (it->second.get_socket() > nfds)
 			{
@@ -234,16 +234,17 @@ void *WebSocketServer::ListenMessages(void *arg)
 		nfds ++;
 		me->ReleaseClientsList();
 		
-		//Log("Selecting\n");
+		Log("Selecting\n");
 		ret = select(nfds, &fds, NULL, NULL, &timeout);
-		//Log("Select returned %i\n", ret);
+		Log("Select returned %i\n", ret);
 		
 		me->LockClientsList();
 		for (auto it = me->clients.begin(); it != me->clients.end();)
 		{
+			ret = 0;
 			if (FD_ISSET(it->second.get_socket(), &fds))
 			{
-				//Log("Next client\n");
+				Log("Next client (fd %i, id %i)\n", it->second.get_socket(), it->second.get_id());
 				do{
 					//Log("Trying to recieve\n");
 					data_len = BUF_LEN;
@@ -258,6 +259,7 @@ void *WebSocketServer::ListenMessages(void *arg)
 					else if (ret < 0)
 					{
 						//ret < 0 in this branch
+						Log("Disconnecting (fd %i, id %i)\n", it->second.get_socket(), it->second.get_id());
 						it->second.Disconnect();
 						me->OnDisconnect(it->second);
 					}
@@ -266,16 +268,15 @@ void *WebSocketServer::ListenMessages(void *arg)
 			}
 			if (ret >= 0)
 			{
-				//Log("incrementing\n");
 				it ++;
 			}
 			else
 			{
-				//Log("incrementing and deleting\n");
+				Log("Erasing (fd %i, id %i)\n", it->second.get_socket(), it->second.get_id());
 				me->clients.erase(it++);
 			}
 		}
-		//Log("releasing list\n");
+		Log("releasing list\n");
 		me->ReleaseClientsList();
 	}
 	

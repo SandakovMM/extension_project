@@ -142,6 +142,55 @@ public:
 		DeleteRequestsFromClient(who.get_id());
 	}
 
+	int StartReadingLog(Client &client, char *log_name)
+	{
+		LogDescription log;
+		int ret = OpenLog(log_name, &(log.fd), &(log.tail_pid));
+		if (ret < 0)
+		{
+			Log("OpenLog returned %i, rejecting\n", ret);
+			return -1;
+		}
+		else
+		{
+			log.SetNonBlocking();
+			Log("Opened \"%s\", fd flags: %i\n", log_name, fcntl(log.fd, F_GETFL));
+			log.name.assign(log_name);
+			log.client_id = client.get_id();
+
+			Log("Locking logs list\n");
+			LockLogsList();
+			logs.push_back(log);
+			if (logs.size() == 1)
+			{
+				TellThatLogsListIsNotEmpty();
+			}
+			ReleaseLogsList();
+			Log("Released logs list\n");
+		}
+		return 0;
+	}
+
+	void StopReadingLog(Client &client, char *log_name)
+	{
+		LockLogsList();
+		int client_id = client.get_id();
+		for (auto it = logs.begin(), end = logs.end(); it != end;)
+		{
+			if (it->client_id == client_id && it->name.compare(log_name) == 0)
+			{
+				it->Cleanup();
+				logs.erase(it++);
+				break;
+			}
+			else
+			{
+				it++;
+			}
+		}
+		ReleaseLogsList();
+	}
+
 	void OnMessage(Client &sender, char *message, int len)
 	{
 		Log("OnMessage fired\n");
@@ -160,48 +209,16 @@ public:
 				file_name_offset++;//adjust pointer to point to beginning of file name
 				if (strncmp(add_action, message, strlen(add_action)) == 0)
 				{
-					LogDescription log;
-					ret = OpenLog(file_name_offset, &(log.fd), &(log.tail_pid));
+					ret = StartReadingLog(sender, file_name_offset);
 					if (ret < 0)
 					{
-						Log("OpenLog returned %i, rejecting\n", ret);
+						Log("Failed to open log file: \"%s\" with code %i\n", file_name_offset, ret);
 						return;
-					}
-					else
-					{
-						log.SetNonBlocking();
-						Log("Opened \"%s\", fd flags: %i\n", file_name_offset, fcntl(log.fd, F_GETFL));
-						log.name.assign(file_name_offset);
-						log.client_id = sender.get_id();
-
-						Log("Locking logs list\n");
-						LockLogsList();
-						logs.push_back(log);
-						if (logs.size() == 1)
-						{
-							TellThatLogsListIsNotEmpty();
-						}
-						ReleaseLogsList();
-						Log("Released logs list\n");
 					}
 				}
 				else if (strncmp(del_action, message, strlen(del_action)) == 0)
 				{
-					LockLogsList();
-					int sender_id = sender.get_id();
-					for (auto it = logs.begin(), end = logs.end(); it != end;)
-					{
-						if (it->client_id == sender_id && it->name.compare(file_name_offset) == 0)
-						{
-							it->Cleanup();
-							logs.erase(it++);
-						}
-						else
-						{
-							it++;
-						}
-					}
-					ReleaseLogsList();
+					StopReadingLog(sender, file_name_offset);
 				}
 			}
 
@@ -257,6 +274,8 @@ public:
 			FD_ZERO(&except_fds);
 			nfds = -1;
 
+			//lock the list, make sure it's not empty and fill fd sets
+			//with fd's of openel log files
 			WaitUntilLogsListIsNotEmpty();
 			for (auto it = logs.begin(), end = logs.end(); it != end; it++)
 			{
@@ -270,6 +289,10 @@ public:
 			nfds++;
 			ReleaseLogsList();
 
+			//wait until one or more logs have new lines or error happens.
+			//this has a 2 seconds timeout so when new log is added to the list
+			//we will read it as well (without timeout we would block here until
+			//one of previously opened logs is changed)
 			ret = select(nfds, &read_fds, NULL, &except_fds, &timeout);
 			if (ret < 0)
 			{
@@ -288,11 +311,15 @@ public:
 				continue;
 			}
 
+			//iterate through all logs, see if we can read anything and do it if so
 			LockLogsList();
 			for (auto it = logs.begin(); it != logs.end();)
 			{
 				if (FD_ISSET(it->fd, &read_fds))
 				{
+					//if log was requested by client who has already disconnected,
+					//delete it. Maybe it's worth deleting this check as we
+					//delete all requests from client when he disconnects.
 					auto client_it = clients.find(it->client_id);
 					if (client_it == clients.end())
 					{
