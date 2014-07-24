@@ -53,10 +53,12 @@ EntryWorker.addEntry = function(entry)
 {
 	var list = $('logList');
 	var allEntryes = entry.split('\n');
-	//alert(allEntryes[0] + ' ' + allEntryes[1]);
 	for (var i = 0; i < allEntryes.length - 1; i++) {
 		var newOption = document.createElement('option');
 		newOption.innerHTML = allEntryes[i];
+		newOption.value = /\[.*?\]/.exec(entry)[0];
+		newOption.value = newOption.value.replace(/[\[\]]/g, "");
+		//alert(newOption.value);
 		newOption.className = EntryWorker.entryAnalyses(allEntryes[i]);
 		list.add(newOption, list[0]);
 	}
@@ -74,6 +76,8 @@ EntryWorker.entryAnalyses = function(entry)
 	}
 	return 'error';
 }
+
+//EntryWorker.time
 
 // Class sender work with web socket connections
 var workSocket;
@@ -113,7 +117,6 @@ function SocketWorker() // Initialyze socket
 SocketWorker.startReadSend = function(host, filename) // function send server file name and start reading logs
 {
 	//workSocket.send('start'); //Send somthing meens that we need to start reading;
-	alert(host + ' and ' + filename);
 	workSocket.send('add /var/www/vhosts/system/' + host + '/logs/' + filename); // some like this
 }
 SocketWorker.stopReadSend = function(host, filename) // function send server file name and start reading logs
