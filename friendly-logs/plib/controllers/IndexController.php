@@ -22,13 +22,6 @@ class IndexController extends pm_Controller_Action
 
     public function indexAction()
     {
-        // Default action will be formAction
-		$this->_forward('form');
-    }
-
-    public function formAction()
-    {
-        // Display simple text in view
         $this->view->test = 'This is index action for testing module.';
 
         $form = new ExtensionForm(); // init form class
