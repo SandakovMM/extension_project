@@ -51,22 +51,26 @@ function EntryWorker() {  }
 EntryWorker.addEntry = function(entry)
 {
 	var list = $('logList');
-	var newOption = document.createElement('option');
-	newOption.innerHTML = entry;
-	// choosing style of entry
-	var rand = Math.random() * 10 + 1;
-	if (rand < 3)
-		newOption.className = 'good';
-	//	newOption.style.background = 'linear-gradient(to right, red, #ffffff';
-	else if (rand < 6)
-		newOption.className = 'warning';
-	//	newOption.style.background = 'linear-gradient(to right, yellow, #ffffff)';
-	else 
-		newOption.className = 'error';
-	//	newOption.style.background = 'linear-gradient(to right, green, #ffffff)';
-	
-	//newOption.className = 'good';
-	list.add(newOption, list[0]);
+	var allEntryes = entry.split('\n');
+	//alert(allEntryes[0] + ' ' + allEntryes[1]);
+	for (var i = 0; i < allEntryes.length - 1; i++) {
+		var newOption = document.createElement('option');
+		newOption.innerHTML = allEntryes[i];
+		// choosing style of entry
+		var rand = Math.random() * 10 + 1;
+		if (rand < 3)
+			newOption.className = 'good';
+		//	newOption.style.background = 'linear-gradient(to right, red, #ffffff';
+		else if (rand < 6)
+			newOption.className = 'warning';
+		//	newOption.style.background = 'linear-gradient(to right, yellow, #ffffff)';
+		else 
+			newOption.className = 'error';
+		//	newOption.style.background = 'linear-gradient(to right, green, #ffffff)';
+		
+		//newOption.className = 'good';
+		list.add(newOption, list[0]);
+	}
 }
 
 // Class sender work with web socket connections
@@ -78,7 +82,7 @@ function SocketWorker() // Initialyze socket
 		var savedVars = $('someInformation').value;
 		var ipAdress = savedVars.split(' ')[1];
      	// Start connection
-	    workSocket = new WebSocket("ws://" + ipAdress + ":10050/");
+	    workSocket = new WebSocket("wss://" + ipAdress + ":10020/");
 	    workSocket.onopen = function()
 	    {
 	        // Web Socket is connected, send data using send()
@@ -107,10 +111,10 @@ function SocketWorker() // Initialyze socket
 SocketWorker.startReadSend = function(host, filename) // function send server file name and start reading logs
 {
 	//workSocket.send('start'); //Send somthing meens that we need to start reading;
-	workSocket.send('/var/www/vhosts/' + host + '/logs/' + filename); // some like this
+	workSocket.send('add /var/www/vhosts/system/' + host + '/logs/' + filename); // some like this
 }
 SocketWorker.stopReadSend = function(host, filename) // function send server file name and start reading logs
 {
 	//workSocket.send('stop'); //Send somthing meens that we need to start reading;
-	workSocket.send('/var/www/vhosts/' + host + '/logs/' + filename); // some like this
+	workSocket.send('del /var/www/vhosts/system/' + host + '/logs/' + filename); // some like this
 }
