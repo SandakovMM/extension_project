@@ -15,7 +15,7 @@
 #define prepareBuffer frame_size = BUF_LEN; memset(frame_buf, 0, BUF_LEN);
 
 #ifdef DEBUGLOGGING
-	#define Log(format, ...) printf(format, ## __VA_ARGS__)
+	#define Log(format, ...) printf(format, ## __VA_ARGS__);fflush(stdout)
 #else
 	#define Log(format, ...)
 #endif
@@ -214,9 +214,9 @@ void *WebSocketServer::ListenMessages(void *arg)
 	
 	while (!(me->stop))
 	{
-		Log("%i clients\n", me->clients.size());
+		//Log("%i clients\n", me->clients.size());
 		me->WaitUntilListIsNotEmpty();
-		Log("Filling set\n");
+		//Log("Filling set\n");
 		timeout.tv_sec = 2;
 		timeout.tv_usec = 0;
 
@@ -224,7 +224,7 @@ void *WebSocketServer::ListenMessages(void *arg)
 		nfds = -1;
 		for (auto it = me->clients.begin(); it != me->clients.end(); it++)
 		{
-			Log("Adding to select list fd %i\n", it->second.get_socket());
+			//Log("Adding to select list fd %i\n", it->second.get_socket());
 			FD_SET(it->second.get_socket(), &fds);
 			if (it->second.get_socket() > nfds)
 			{
@@ -234,9 +234,9 @@ void *WebSocketServer::ListenMessages(void *arg)
 		nfds ++;
 		me->ReleaseClientsList();
 		
-		Log("Selecting\n");
+		//Log("Selecting\n");
 		ret = select(nfds, &fds, NULL, NULL, &timeout);
-		Log("Select returned %i\n", ret);
+		//Log("Select returned %i\n", ret);
 		
 		me->LockClientsList();
 		for (auto it = me->clients.begin(); it != me->clients.end();)
@@ -276,7 +276,7 @@ void *WebSocketServer::ListenMessages(void *arg)
 				me->clients.erase(it++);
 			}
 		}
-		Log("releasing list\n");
+		//Log("releasing list\n");
 		me->ReleaseClientsList();
 	}
 	

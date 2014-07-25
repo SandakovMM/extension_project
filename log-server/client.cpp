@@ -11,7 +11,7 @@
 
 
 #ifdef DEBUGLOGGING
-	#define Log(format, ...) printf(format, ## __VA_ARGS__)
+	#define Log(format, ...) printf(format, ## __VA_ARGS__);fflush(stdout)
 #else
 	#define Log(format, ...)
 #endif

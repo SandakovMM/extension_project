@@ -9,7 +9,7 @@
 #include <unistd.h>
 
 #ifdef DEBUGLOGGING
-	#define Log(format, ...) printf(format, ## __VA_ARGS__)
+	#define Log(format, ...) printf(format, ## __VA_ARGS__);fflush(stdout)
 #else
 	#define Log(format, ...)
 #endif
@@ -63,7 +63,7 @@ public:
 		pthread_cond_init(&logs_not_empty_cond, NULL);
 	}
 
-	int LockLogsList()
+	inline int LockLogsList()
 	{
 		if (pthread_mutex_lock(&logs_mutex))
 		{
@@ -75,7 +75,7 @@ public:
 		}
 	}
 
-	int ReleaseLogsList()
+	inline int ReleaseLogsList()
 	{
 		if (pthread_mutex_unlock(&logs_mutex))
 		{
@@ -86,7 +86,7 @@ public:
 			return 0;
 		}
 	}
-	void WaitUntilLogsListIsNotEmpty()
+	inline void WaitUntilLogsListIsNotEmpty()
 	{
 		pthread_mutex_lock(&logs_mutex);
 		if (logs.size() == 0)
@@ -96,7 +96,7 @@ public:
 		//pthread_mutex_unlock(&clients_mutex);
 	}
 
-	void TellThatLogsListIsNotEmpty()
+	inline void TellThatLogsListIsNotEmpty()
 	{
 		pthread_cond_signal(&logs_not_empty_cond);
 	}
@@ -137,7 +137,7 @@ public:
 		return 0;
 	}
 
-	void OnDisconnect(Client &who)
+	inline void OnDisconnect(Client &who)
 	{
 		DeleteRequestsFromClient(who.get_id());
 	}
@@ -188,7 +188,7 @@ public:
 		return 0;
 	}
 
-	void StopReadingLog(Client &client, char *log_name)
+	inline void StopReadingLog(Client &client, char *log_name)
 	{
 		LockLogsList();
 		int client_id = client.get_id();
@@ -247,7 +247,7 @@ public:
 		}
 	}
 
-	void DeleteRequestsFromClient(int client_id)
+	inline void DeleteRequestsFromClient(int client_id)
 	{
 		LockLogsList();
 		for (auto it = logs.begin(), end = logs.end(); it != end;)
