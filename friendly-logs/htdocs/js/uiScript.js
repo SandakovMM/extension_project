@@ -52,18 +52,15 @@ function EntryWorker() {  }
 EntryWorker.addEntry = function(entry)
 {
 	var list = $('logList');
-	var allEntryes = entry.split('\n');
-	for (var i = 0; i < allEntryes.length - 1; i++) {
-		var newOption = document.createElement('option');
-		newOption.innerHTML = allEntryes[i];
-		newOption.value = /\[.*?\]/.exec(allEntryes[i])[0];
-/*		EntryWorker.dateWorker(newOption.value);
-		var tryDate = Date.parse(newOption.value);
-		alert(tryDate);*/
-
-		newOption.className = EntryWorker.entryAnalyses(allEntryes[i]);
-		list.add(newOption, list[0]);
-	}
+	// Generate new option
+	var newOption = document.createElement('option');
+	newOption.innerHTML = entry;
+	newOption.value = /\[.*?\]/.exec(entry)[0];
+	newOption.value = EntryWorker.dateWorker(newOption.value);
+	/*var tryDate = Date.parse(newOption.value);
+	alert(tryDate);/**/
+	newOption.className = EntryWorker.entryAnalyses(entry);
+	list.add(newOption, list[0]);
 }
 
 EntryWorker.entryAnalyses = function(entry) // Add most found entryes.
@@ -73,16 +70,33 @@ EntryWorker.entryAnalyses = function(entry) // Add most found entryes.
 	if (/\[ssl:warn\]/.test(entry)) {
 		return 'warning'
 	}
+	if (/\[warn/.test(entry)) {
+		return 'warning'
+	}
 	if (/\"GET/.test(entry)) {
 		return 'good'
 	}
 	return 'error';
 }
 
-EntryWorker.dateWorker = function(dateEntry) // make some shit!
+EntryWorker.dateWorker = function(dateEntry) // Function to make normal time from log.
 {
-	var result = dateEntry.value.replace(/[\[\]]/g, '');
-	var result = result.value.replace(/^(.*?)\s.*$/, '$1');
+	var result = dateEntry.replace(/[\[\]]/g, '');
+	if (/^.*?\s[-+].*$/.test(result)) { // if it's log from standart access.
+		var timeShift = result.replace(/^.*?\s([-+].*)$/, '$1');
+		var result = result.replace(/^(.*?)\s[-+].*$/, '$1'); // Serios SHIT!
+		var detachF = result.split('/');
+		var detachS = detachF[2].split(':');
+		var resDate = Date.parse(detachF[1] + ' ' + detachF[0] + ' ' + detachS[0] + ' ' + 
+					detachS[1] + ':' + detachS[2] + ':' + detachS[3] + ' GMT' + timeShift);
+	}
+	else {// seems like error log. Later need find other shit.
+		var detachF = result.split(' ');
+		var detachS = detachF[3].split('.');
+		var resDate = Date.parse(detachF[0] + ' ' + detachF[1] + ' ' + detachF[2] + ' ' + 
+					detachF[4] + ' ' + detachS[0]);
+	}
+	return resDate;
 }
 
 // Class sender work with web socket connections
