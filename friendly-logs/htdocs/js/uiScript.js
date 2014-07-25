@@ -81,6 +81,12 @@ EntryWorker.entryAnalyses = function(entry) // Add most found entryes.
 	if (/\"GET/.test(entry)) {
 		return 'good'
 	}
+	if (/\"HEAD/.test(entry)) {
+		return 'good'
+	}
+	if (/\"POST/.test(entry)) {
+		return 'good'
+	}
 	return 'error';
 }
 

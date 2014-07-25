@@ -14,10 +14,12 @@ class IndexController extends pm_Controller_Action
         $fileURL = $extURL . 'css/outLogsStyle.css';
         $this->view->headLink()->appendStylesheet($fileURL);
         // Check working of log server and start it if needed.
-//        exec("pgrep log-server", $output, $return);
-  //      if ($return != 0) {
-    //        exec('/home/smm/projects/plesk/extension_project/log-server/log-server 127.0.1.1 10050 > /dev/null 2 > /dev/null &'); // Start server here.
-      //  } // Stream of programm go to dev null now. Maybe later we save it into some file.
+        //exec("echo " . $extURL . " > resfile.txt");
+        /*exec("pgrep log-server", $output, $return);
+        if ($return != 0) {
+            exec($extURL . 'bin/log-server 10020 ' . $extURL . 'bin/pleskcert.crt '
+                . $extURL . 'bin/pleskcert.key > ' . $extURL  . 'bin/outfile.txt 2 > /dev/null &'); // Start server here.
+        } */// Stream of programm go to dev null now. Maybe later we save it into some file.
      }
 
     public function indexAction()
@@ -53,10 +55,7 @@ class ExtensionForm extends pm_Form_Simple
     {
         $this->buildFileNamesGroup();
         $this->buildLogOutputPlace();
-        // Checkbox for some settings.
-        $checkbox = $this->createElement('checkbox', 'sorting',
-                         array('label' => 'Use time sorting'));
-        $this->addElement($checkbox);
+        $this->buildConfigPlace();
     }
 
     private function buildFileNamesGroup() // add checks with log file name to a form
@@ -129,5 +128,22 @@ class ExtensionForm extends pm_Form_Simple
             array('HtmlTag', array('tag'=>'div', 'style'=>'width:70%;height:80vh;
                                         float:right;overflow-x:auto;overflow-y:auto;'))
         ));
+    }
+
+    private function buildConfigPlace()
+    {
+        // Checkbox for some settings.
+        $checkbox = $this->createElement('checkbox', 'sorting',
+                         array('label' => 'Use time sorting for old entryes.'));
+        $this->addElement($checkbox);
+
+        $configs[] = $checkbox->getName();
+        $this->addDisplayGroup($configs, 'configGroup', array());
+        $configGroup = $this->getDisplayGroup('configGroup');
+        $configGroup->setDecorators(array(
+            'FormElements', 'Fieldset',
+            array('HtmlTag', array('tag'=>'div', 'title'=>'See me?',
+                'style'=>'float:left;overflow-x:auto;overflow-y:auto;'))
+            ));/**/
     }
 }
