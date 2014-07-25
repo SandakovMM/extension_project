@@ -57,10 +57,12 @@ EntryWorker.addEntry = function(entry)
 	newOption.innerHTML = entry;
 	newOption.value = /\[.*?\]/.exec(entry)[0];
 	newOption.value = EntryWorker.dateWorker(newOption.value);
+
 	/*var tryDate = Date.parse(newOption.value);
 	alert(tryDate);/**/
 	newOption.className = EntryWorker.entryAnalyses(entry);
-	list.add(newOption, list[0]);
+	var pos = EntryWorker.findPlace(newOption.value);
+	list.add(newOption, list[pos]);
 }
 
 EntryWorker.entryAnalyses = function(entry) // Add most found entryes.
@@ -97,6 +99,17 @@ EntryWorker.dateWorker = function(dateEntry) // Function to make normal time fro
 					detachF[4] + ' ' + detachS[0]);
 	}
 	return resDate;
+}
+
+EntryWorker.findPlace = function(dateEntry) // Function to make normal time from log.
+{
+	var allOptions = $$('select#logList option');
+	var i = 0;
+	for (; i < allOptions.length; i++) {
+		if (allOptions[i].value <= dateEntry)
+			return i;
+	}
+	return i;
 }
 
 // Class sender work with web socket connections
