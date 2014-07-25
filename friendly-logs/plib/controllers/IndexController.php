@@ -24,11 +24,23 @@ class IndexController extends pm_Controller_Action
     {
         $this->view->test = 'This is index action for testing module.';
 
+        /*try {
+            $domain = pm_Session::getCurrentDomain();
+        } catch (pm_Exception $ex) {
+            $this->_forward('overview');
+                return;
+        }*/
+
         $form = new ExtensionForm(); // init form class
         $form->build();
 
         $this->view->form = $form;
 
+    }
+
+    public function overviewAction()
+    {
+        $this->view->pageTitle = $this->lmsg('overviewPageTitle');
     }
 }
 
