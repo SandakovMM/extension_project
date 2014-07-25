@@ -55,13 +55,16 @@ EntryWorker.addEntry = function(entry)
 	// Generate new option
 	var newOption = document.createElement('option');
 	newOption.innerHTML = entry;
-	newOption.value = /\[.*?\]/.exec(entry)[0];
-	newOption.value = EntryWorker.dateWorker(newOption.value);
-
-	/*var tryDate = Date.parse(newOption.value);
-	alert(tryDate);/**/
+	
 	newOption.className = EntryWorker.entryAnalyses(entry);
-	var pos = EntryWorker.findPlace(newOption.value);
+	if ($('sorting').checked) {
+		newOption.value = /\[.*?\]/.exec(entry)[0];
+		newOption.value = EntryWorker.dateWorker(newOption.value);
+		var pos = EntryWorker.findPlace(newOption.value);
+	} else {
+		newOption.value = 0;
+		var pos = 0;
+	}
 	list.add(newOption, list[pos]);
 }
 

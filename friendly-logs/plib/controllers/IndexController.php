@@ -53,6 +53,10 @@ class ExtensionForm extends pm_Form_Simple
     {
         $this->buildFileNamesGroup();
         $this->buildLogOutputPlace();
+        // Checkbox for some settings.
+        $checkbox = $this->createElement('checkbox', 'sorting',
+                         array('label' => 'Use time sorting'));
+        $this->addElement($checkbox);
     }
 
     private function buildFileNamesGroup() // add checks with log file name to a form
