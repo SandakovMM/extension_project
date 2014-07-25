@@ -11,7 +11,7 @@ Reaction.clickFileCheck = function (clickedElem)
 	var savedVars = $('someInformation').value;
 	var domainName = savedVars.split(' ')[0];
 	if (!clickedElem.checked) {
-		//SocketWorker.stopReadSend(separated[0], fileName)) // Sending file names to server like that.
+		SocketWorker.stopReadSend(domainName, fileName); // Sending file names to server like that.
 		$('setupAll').checked = false;
 	}
 	else {
