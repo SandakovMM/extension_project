@@ -17,15 +17,38 @@
 const char add_action[] = "add";
 const char del_action[] = "del";
 
-struct LogDescription
+class LogDescription
 {
 	std::string name;
 	int fd;
+	FILE *stream;
 	pid_t tail_pid;
 	int client_id;
-	void Cleanup()
+public:
+	LogDescription(char *flename)
 	{
-		close(fd);
+		tail_pid = -1;
+		name.assign(flename);
+	}
+	inline void set_client_id(int id)
+	{
+		client_id = id;
+	}
+	inline int get_client_id()
+	{
+		return client_id;
+	}
+	inline int get_fd()
+	{
+		return fd;
+	}
+	inline const std::string& get_name()
+	{
+		return name;
+	}
+	inline void Cleanup()
+	{
+		fclose(stream);
 		pid_t ret = waitpid(tail_pid, NULL, WNOHANG);
 		if (ret > 0 || ret < 0)
 		{
@@ -38,12 +61,98 @@ struct LogDescription
 			waitpid(tail_pid, NULL, 0);
 		}
 	}
-	int SetNonBlocking()
+	int Open()
+	{
+		fd = open(name.c_str(), O_RDONLY);
+		if (fd == -1)
+		{
+			return -1;
+		}
+		stream = fdopen(fd, "r");
+		if (!stream)
+		{
+			return -2;
+		}
+		return 0;
+	}
+	int OpenTail()
+	{
+		int tailPipe[2];
+		if (pipe(tailPipe) == -1)
+		{
+			return -1;
+		}
+
+		pid_t pid = fork();
+		if (pid < 0)
+			return -2;
+		else if (pid > 0)
+		{
+			close(tailPipe[1]);
+			tail_pid = pid;
+			fd = tailPipe[0];
+			stream = fdopen(fd, "r");
+			if (!stream)
+			{
+				Cleanup();
+				return -4;
+			}
+			SetNonBlocking();
+			return 0;
+		}
+
+		if (name.length() >= 2048)
+		{
+			return -5;
+		}
+		char fname[2048];
+		name.copy(fname, name.length());
+		fname[name.length()] = 0;
+		char *const args[] = {"tail", "-F", "-n", "0", fname, NULL};
+		close(tailPipe[0]);
+		dup2(tailPipe[1], 1);
+		execvp("tail", args);
+		return -3;
+	}
+	inline int SetNonBlocking()
 	{
 		int ret = fcntl(fd, F_SETFL, O_NONBLOCK);
 		if (ret < 0)
 		{
 			Log("fcntl error\n");
+			return -1;
+		}
+		return 0;
+	}
+	int GetNextLine(char *buf, int buf_len)
+	{
+		if (!fgets(buf, buf_len, stream))
+		{
+			if (tail_pid > 0)
+			{
+				Cleanup();
+				Log("Error occured while reading from tail (%s)\n", name.c_str());
+				return -2;
+			}
+			else
+			{
+				fclose(stream);
+				if (OpenTail() < 0)
+				{
+					return -3;
+				}
+				else
+				{
+					if (!fgets(buf, buf_len, stream))
+					{
+						return 1;
+					}
+					else
+					{
+						return 0;
+					}
+				}
+			}
 			return -1;
 		}
 		return 0;
@@ -101,31 +210,6 @@ public:
 		pthread_cond_signal(&logs_not_empty_cond);
 	}
 
-	int OpenLog(char *fileName, int *retFd, pid_t *retPid)
-	{
-		int tailPipe[2];
-		if (pipe(tailPipe) == -1)
-		{
-			return -1;
-		}
-
-		pid_t pid = fork();
-		if (pid < 0)
-			return -2;
-		else if (pid > 0)
-		{
-			close(tailPipe[1]);
-			*retFd = tailPipe[0];
-			*retPid = pid;
-			return 0;
-		}
-
-		char *args[] = {"tail", "-F", "-n", "0", fileName, NULL};
-		close(tailPipe[0]);
-		dup2(tailPipe[1], 1);
-		execvp("tail", args);
-		return -3;
-	}
 
 	int CheckLogName(char *log_name)
 	{
@@ -144,7 +228,7 @@ public:
 
 	int StartReadingLog(Client &client, char *log_name)
 	{
-		const int buf_len = 2048;
+		/*const int buf_len = 2048;
 		char buf[buf_len];
 		int ret;
 
@@ -159,10 +243,10 @@ public:
 			client.Send(buf, strlen(buf));
 		}
 		fclose(f);
-		Log("Content of \"%s\" has been sent\n", log_name);
+		Log("Content of \"%s\" has been sent\n", log_name);*/
 
-		LogDescription log;
-		ret = OpenLog(log_name, &(log.fd), &(log.tail_pid));
+		LogDescription log(log_name);
+		int ret = log.Open();
 		if (ret < 0)
 		{
 			Log("OpenLog returned %i, rejecting\n", ret);
@@ -170,10 +254,8 @@ public:
 		}
 		else
 		{
-			log.SetNonBlocking();
-			Log("Opened \"%s\", fd flags: %i\n", log_name, fcntl(log.fd, F_GETFL));
-			log.name.assign(log_name);
-			log.client_id = client.get_id();
+			Log("Opened \"%s\", fd flags: %i\n", log_name, fcntl(log.get_fd(), F_GETFL));
+			log.set_client_id(client.get_id());
 
 			Log("Locking logs list\n");
 			LockLogsList();
@@ -194,7 +276,7 @@ public:
 		int client_id = client.get_id();
 		for (auto it = logs.begin(), end = logs.end(); it != end;)
 		{
-			if (it->client_id == client_id && it->name.compare(log_name) == 0)
+			if (it->get_client_id() == client_id && it->get_name().compare(log_name) == 0)
 			{
 				it->Cleanup();
 				logs.erase(it++);
@@ -252,7 +334,7 @@ public:
 		LockLogsList();
 		for (auto it = logs.begin(), end = logs.end(); it != end;)
 		{
-			if (it->client_id == client_id)
+			if (it->get_client_id() == client_id)
 			{
 				it->Cleanup();
 				logs.erase(it++);
@@ -296,11 +378,12 @@ public:
 			WaitUntilLogsListIsNotEmpty();
 			for (auto it = logs.begin(), end = logs.end(); it != end; it++)
 			{
-				FD_SET(it->fd, &read_fds);
-				FD_SET(it->fd, &except_fds);
-				if (it->fd > nfds)
+				int fd = it->get_fd();
+				FD_SET(fd, &read_fds);
+				FD_SET(fd, &except_fds);
+				if (fd > nfds)
 				{
-					nfds = it->fd;
+					nfds = fd;
 				}
 			}
 			nfds++;
@@ -332,31 +415,36 @@ public:
 			LockLogsList();
 			for (auto it = logs.begin(); it != logs.end();)
 			{
-				if (FD_ISSET(it->fd, &read_fds))
+				if (FD_ISSET(it->get_fd(), &read_fds))
 				{
 					//if log was requested by client who has already disconnected,
 					//delete it. Maybe it's worth deleting this check as we
 					//delete all requests from client when he disconnects.
-					auto client_it = clients.find(it->client_id);
+					auto client_it = clients.find(it->get_client_id());
 					if (client_it == clients.end())
 					{
 						it->Cleanup();
 						logs.erase(it++);
 						continue;
 					}
-					do
-					{
-						ret = read(it->fd, buf, buf_len);
+					//do
+					//{
+						/*ret = read(it->fd, buf, buf_len);
 						if (ret > 0)
 						{
 							client_it->second.Send(buf, ret);
+						}*/
+						ret = it->GetNextLine(buf, buf_len);
+						if (ret == 0)
+						{
+							client_it->second.Send(buf, strlen(buf));
 						}
-					}
-					while (ret == buf_len);
+					//}
+					//while (ret == buf_len);
 				}
-				if (FD_ISSET(it->fd, &except_fds))
+				if (FD_ISSET(it->get_fd(), &except_fds))
 				{
-					Log("Exception for %s\n", it->name.c_str());
+					Log("Exception for %s\n", it->get_name().c_str());
 					it->Cleanup();
 					logs.erase(it++);
 					continue;

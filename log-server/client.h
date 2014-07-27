@@ -2,7 +2,7 @@
 
 #include <openssl/ssl.h>
 
-#define BUF_LEN 2048
+#define BUF_LEN 8192
 #define SEND_BUF_LEN 16000
 
 #define READ_SUCCEED 0
