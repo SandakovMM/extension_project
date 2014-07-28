@@ -1,6 +1,6 @@
 // Call init socket function ol load of document
 document.observe('dom:loaded', function(){ SocketWorker(); });
-
+var logEntries = [], currentPage = 0, entriesPerPage = 400, pagesCount = 0;
 // Class reaction work with on click user actions.
 function Reaction() {  }
 	//function clickFileCheck(clickedElem)
@@ -60,7 +60,7 @@ function EntryWorker() {  }
 
 EntryWorker.addEntry = function(entry)
 {
-	var list = $('logList');
+	/*var list = $('logList');
 	// Generate new option
 	var newOption = document.createElement('option');
 	newOption.innerHTML = entry;
@@ -73,8 +73,44 @@ EntryWorker.addEntry = function(entry)
 	} else {
 		newOption.value = 0;
 		var pos = 0;
+	}*/
+	//list.add(newOption, list[pos]);
+	//logRecords[logRecords.length] = entry;
+	if ($('sorting').checked) {
+		var value = /\[.*?\]/.exec(entry)[0];
+		value = EntryWorker.dateWorker(value);
+		var pos = EntryWorker.findPlace(value);
+	} else {
+		var pos = logEntries.length;
 	}
-	list.add(newOption, list[pos]);
+	//list.add(newOption);
+	logEntries.splice(pos, 0, entry);
+
+	if (pos < (currentPage + 1) * entriesPerPage){
+		goToPage(currentPage);
+	}
+
+	if (logEntries.length > pagesCount * entriesPerPage){
+		var newPage = document.createElement('a');
+		newPage.setAttribute('href', 'javascript:void(0);');
+		newPage.setAttribute('onclick', 'goToPage(' + pagesCount + ')');
+		newPage.innerHTML = '#' + (pagesCount + 1);
+		$('pages').appendChild(newPage);
+		pagesCount++;
+	}
+
+}
+function goToPage(page){
+	var logs = $('logList');
+	logs.innerHTML = '';
+	var end = (page + 1) * entriesPerPage;
+	for (i = page * entriesPerPage; i < end && i < logEntries.length; i++){
+		var newOption = document.createElement('font');
+		newOption.innerHTML = logEntries[i] + '<br><br>';
+		newOption.className = EntryWorker.entryAnalyses(logEntries[i]);
+		logs.appendChild(newOption);
+	}
+	currentPage = page;
 }
 
 EntryWorker.entryAnalyses = function(entry) // Add most found entryes.

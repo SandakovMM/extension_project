@@ -121,9 +121,9 @@ class ExtensionForm extends pm_Form_Simple
     }
     private function buildLogOutputPlace()
     {
-        $selectElem = new Zend_Form_Element_Select('logList', array(
+        /*$selectElem = new Zend_Form_Element_Select('logList', array(
                 'label'=>'Logs', 'size'=>'2', 
-                'style'=>'height:70vh;overflow:hidden;'));
+                'style'=>'height:70vh;width:100%;overflow:auto;'));
 
         $this->addElement($selectElem);
 
@@ -133,8 +133,31 @@ class ExtensionForm extends pm_Form_Simple
         $this->logPlaceGroup->setDecorators(array(
             'FormElements', 'Fieldset',
             array('HtmlTag', array('tag'=>'div', 'style'=>'width:70%;height:80vh;
-                                        float:right;overflow-x:auto;overflow-y:auto;'))
-        ));
+                                        float:right;overflow-x:auto;overflow-y:auto;')),
+	    array(array('pages'=>'HtmlTag'), array('tag'=>'div', 'id'=>'pages',
+	    	'style'=>'width:70%;height:50px;overflow:auto','placement'=>'append'))
+        ));*/
+	$this->addElement('hidden', 'outputDive',array(
+		'required' => false,
+		'ignore' => true,
+		'autoInsertNotEmptyValidator' => false,
+		'decorators' => array(
+			array( array( 'divLogList' => 'HtmlTag' ), 
+				array( 'tag' => 'div',
+					'id' => 'logList',
+					'style'=>'height:700px; width:70%; overflow:auto;',
+					'placement' => 'append' 
+					) 
+			),
+			array( array( 'divPages' => 'HtmlTag' ),
+				array( 'tag' => 'div',
+				'id' => 'pages',
+				'style'=>'height:50px; width:70%; overflow:auto;margin: inherit inherit inherit 30%',
+				'placement' => 'append'
+				)
+			)
+		)
+	));
     }
 
     private function buildConfigPlace()
