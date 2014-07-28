@@ -26,12 +26,12 @@ class IndexController extends pm_Controller_Action
     {
         $this->view->test = 'This is index action for testing module.';
 
-        /*try {
-            $domain = pm_Session::getCurrentDomain();
-        } catch (pm_Exception $ex) {
+        // making redirect if we don't has domain.
+        $client = pm_Session::getClient();
+        if (($client->isAdmin() || $client->isReseller()) && !pm_Session::isImpersonated()) {
             $this->_forward('overview');
-                return;
-        }*/
+            return 0;
+        }
 
         $form = new ExtensionForm(); // init form class
         $form->build();
@@ -42,7 +42,7 @@ class IndexController extends pm_Controller_Action
 
     public function overviewAction()
     {
-        $this->view->pageTitle = $this->lmsg('overviewPageTitle');
+        $this->view->pageTitle = 'Help page';
     }
 }
 
@@ -56,6 +56,7 @@ class ExtensionForm extends pm_Form_Simple
         $this->buildFileNamesGroup();
         $this->buildLogOutputPlace();
         $this->buildConfigPlace();
+
     }
 
     private function buildFileNamesGroup() // add checks with log file name to a form
