@@ -1,5 +1,5 @@
 .good {
-	background-color: #b4ddb4; /* Old browsers */
+	background-color: #61c419; /* Old browsers */
 	/*background-image: -moz-linear-gradient(top, #b4ddb4 0%, #83c783 10%, #52b152 23%, #008a00 45%, #029300 68%, #9cd37c 100%); /* FF3.6+ */
 	/*background-image: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#b4ddb4), color-stop(10%,#83c783), color-stop(23%,#52b152), color-stop(45%,#008a00), color-stop(68%,#029300), color-stop(100%,#9cd37c)); /* Chrome,Safari4+ */
 	/*background-image: -webkit-linear-gradient(top, #b4ddb4 0%,#83c783 10%,#52b152 23%,#008a00 45%,#029300 68%,#9cd37c 100%); /* Chrome10+,Safari5.1+ */
@@ -10,7 +10,7 @@
 }
 
 .warning {
-	background-color: #f7f4c0; /* Old browsers */
+	background-color: #f1da36; /* Old browsers */
 /*	background-image: -moz-linear-gradient(top, #f7f4c0 5%, #ede471 23%, #efdf00 43%, #f4e800 61%, #f2ee8e 84%); /* FF3.6+ */
 /*	background-image: -webkit-gradient(linear, left top, left bottom, color-stop(5%,#f7f4c0), color-stop(23%,#ede471), color-stop(43%,#efdf00), color-stop(61%,#f4e800), color-stop(84%,#f2ee8e)); /* Chrome,Safari4+ */
 /*	background-image: -webkit-linear-gradient(top, #f7f4c0 5%,#ede471 23%,#efdf00 43%,#f4e800 61%,#f2ee8e 84%); /* Chrome10+,Safari5.1+ */
