@@ -7,6 +7,7 @@
 
 #include <fcntl.h>
 #include <unistd.h>
+#include <time.h>
 
 #ifdef DEBUGLOGGING
 	#define Log(format, ...) printf(format, ## __VA_ARGS__);fflush(stdout)
@@ -24,11 +25,15 @@ class LogDescription
 	FILE *stream;
 	pid_t tail_pid;
 	int client_id;
+	struct timespec next_send_time;
+	long send_interval;
 public:
 	LogDescription(char *flename)
 	{
 		tail_pid = -1;
 		name.assign(flename);
+		clock_gettime(CLOCK_MONOTONIC, &next_send_time);
+		send_interval = 10000000;
 	}
 	inline void set_client_id(int id)
 	{
@@ -126,6 +131,9 @@ public:
 	}
 	int GetNextLine(char *buf, int buf_len)
 	{
+		//sleep until the next point in time when we are allowed to read
+		clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next_send_time, NULL);
+		//then try to read and if succeed set up the next time when to read
 		if (!fgets(buf, buf_len, stream))
 		{
 			if (tail_pid > 0)
@@ -149,12 +157,18 @@ public:
 					}
 					else
 					{
+						clock_gettime(CLOCK_MONOTONIC, &next_send_time);
+						next_send_time.tv_sec += (next_send_time.tv_nsec + send_interval) / 1000000000;
+						next_send_time.tv_nsec = (next_send_time.tv_nsec + send_interval) % 1000000000;
 						return 0;
 					}
 				}
 			}
 			return -1;
 		}
+		clock_gettime(CLOCK_MONOTONIC, &next_send_time);
+		next_send_time.tv_sec += (next_send_time.tv_nsec + send_interval) / 1000000000;
+		next_send_time.tv_nsec = (next_send_time.tv_nsec + send_interval) % 1000000000;
 		return 0;
 	}
 };

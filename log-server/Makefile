@@ -1,7 +1,7 @@
 
 COMPILER=g++
 CFLAGS=-Lcwebsocket -Iinclude -std=c++0x
-STATICLIBS=-pthread -lcwebsocket -lssl -lcrypto
+STATICLIBS=-pthread -lcwebsocket -lssl -lcrypto -lrt
 OBJS=web_socket_server.o client.o log-server.o
 
 all: lib log-server
