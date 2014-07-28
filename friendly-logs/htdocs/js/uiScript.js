@@ -86,7 +86,7 @@ EntryWorker.addEntry = function(entry)
 	//list.add(newOption);
 	logEntries.splice(pos, 0, entry);
 
-	if (pos < (currentPage + 1) * entriesPerPage){
+	if (pos < (currentPage + 1) * entriesPerPage || 0 == currentPage || $('sorting').checked){
 		goToPage(currentPage);
 	}
 
@@ -103,10 +103,13 @@ EntryWorker.addEntry = function(entry)
 function goToPage(page){
 	var logs = $('logList');
 	logs.innerHTML = '';
-	var end = (page + 1) * entriesPerPage;
-	for (i = page * entriesPerPage; i < end && i < logEntries.length; i++){
+	var start = (pagesCount - page) * entriesPerPage - 1;
+	if (start >= logEntries.length)
+		start = logEntries.length - 1;
+	var end = (pagesCount - page - 1) * entriesPerPage;
+	for (i = start; i >= end && i >= 0; i--){
 		var newOption = document.createElement('font');
-		newOption.innerHTML = logEntries[i] + '<br><br>';
+		newOption.innerHTML = logEntries[i] + i + '<br><br>';
 		newOption.className = EntryWorker.entryAnalyses(logEntries[i]);
 		logs.appendChild(newOption);
 	}

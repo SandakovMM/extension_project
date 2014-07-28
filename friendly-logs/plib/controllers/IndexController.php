@@ -145,7 +145,7 @@ class ExtensionForm extends pm_Form_Simple
 			array( array( 'divLogList' => 'HtmlTag' ), 
 				array( 'tag' => 'div',
 					'id' => 'logList',
-					'style'=>'height:700px; width:70%; overflow:auto;',
+					'style'=>'height:70vh; width:70%; overflow:auto;',
 					'placement' => 'append' 
 					) 
 			),
