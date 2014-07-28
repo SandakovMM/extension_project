@@ -97,6 +97,12 @@ class ExtensionForm extends pm_Form_Simple
         $checkbox->setAttrib('onclick', 'Reaction.clickAllFiles(this)');
         $this->addElement($checkbox);
         $this->logNamesGroup->addElement($checkbox);/* Find the way how do it normal*/
+                // Add button for clear all options from log list.
+        $clearButton = $this->createElement('button', 'clearAll', array(
+                                            'label' => 'Clear all entryes.'));
+        $clearButton->setAttrib('onclick', 'Reaction.clearAll()');
+        $this->addElement($clearButton);
+        $this->logNamesGroup->addElement($clearButton);
 
                                 // Add element with nedded for server information.
         $serverIP = $_SERVER['SERVER_ADDR'];
