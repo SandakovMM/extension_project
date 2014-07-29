@@ -47,12 +47,12 @@ Reaction.clickAllFiles = function(clickedElem)
 }
 
 Reaction.clearAll = function()
-{
-	var list = $('logList');
-	var i;
-	for (i = list.options.length - 1; i >= 0; i--) {
-		list.remove(i);
-	}
+{	
+	var col = logEntries.length;
+	logEntries.splice(0, col);
+	var list = $('logList').innerHTML = "";
+	var pages = $('pages').innerHTML = "";
+	pagesCount = 0;
 }
 
 // Class entry worker add entryes to list and add some css styles to entryes
