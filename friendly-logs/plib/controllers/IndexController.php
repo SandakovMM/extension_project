@@ -5,6 +5,12 @@ class IndexController extends pm_Controller_Action
     public function init()
     {
         parent::init();
+        // For sloving problems
+/*        $myUser = get_current_user(); */
+        $myPath = getcwd();
+        
+        // ===========================
+
         $this->view->pageTitle = 'Log viewer';
     	// Include js files.
         $extURL = pm_Context::getBaseUrl();
@@ -12,14 +18,21 @@ class IndexController extends pm_Controller_Action
     	$this->view->headScript()->appendFile($fileURL);
         // Add css files
         $fileURL = $extURL . 'css/outLogsStyle.css';
+
+        $file = fopen("/home/smm/projects/plesk/anything/myfile.txt", "w");
+        fwrite($file, $myPath . '/bin/log-server 10020 ' . $myPath . '/bin/pleskcert.pem '
+                . $myPath . '/bin/pleskpkey.pem > /home/smm/projects/plesk/anything/outfile.txt' . 
+                    '2 > /home/smm/projects/plesk/anything/outfile.txt &');
+        fclose($file);/* */
+
         $this->view->headLink()->appendStylesheet($fileURL);
         // Check working of log server and start it if needed.
-        //exec("echo " . $extURL . " > resfile.txt");
-        /*exec("pgrep log-server", $output, $return);
+        exec("pgrep log-server", $output, $return);
         if ($return != 0) {
-            exec($extURL . 'bin/log-server 10020 ' . $extURL . 'bin/pleskcert.crt '
-                . $extURL . 'bin/pleskcert.key > ' . $extURL  . 'bin/outfile.txt 2 > /dev/null &'); // Start server here.
-        } */// Stream of programm go to dev null now. Maybe later we save it into some file.
+            exec($myPath . '/bin/log-server 10020 ' . $myPath . '/bin/pleskcert.pem '
+                . $myPath . '/bin/pleskpkey.pem > /home/smm/projects/plesk/anything/outfile.txt' . 
+                    '2 > /home/smm/projects/plesk/anything/outfile.txt &'); // Start server here.
+        } /**/// Stream of programm go to dev null now. Maybe later we save it into some file.
      }
 
     public function indexAction()
